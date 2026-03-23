@@ -513,7 +513,7 @@ function redraw() {
   undoBtn.disabled = hist.length === 0;
 
   if (phase === 'playing') {
-    if (placed === 31) setStatus('축하드립니다! 31개를 모두 놓았습니다. 어떤 블록을 선택해서 성공할 수 있었을까요?', 'win');
+    if (placed === 31) setStatus('축하드립니다! 31개를 모두 놓았습니다.<br><span style="color:#f59e0b;font-weight:700;">당신이 선택한 블록의 종류와 성공여부에는 어떤 관계가 있나요?</span>', 'win');
     else if (placed > 0) setStatus(`${placed}개 배치됨 — 남은 도미노: ${31 - placed}개`, 'ok');
     else setStatus('빈 칸을 클릭하거나 드래그해서 도미노를 놓아보세요.');
   }
@@ -792,7 +792,7 @@ function setMode(mode) {
 }
 
 function setStatus(msg, cls = '') {
-  statusEl.textContent = msg;
+  statusEl.innerHTML = msg;
   statusEl.className = 'status ' + cls;
 }
 
