@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>도미노 도전 — 증명 풀이</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      font-family: 'Noto Sans KR', sans-serif;
+      color: #2c1a07;
+      display: flex; flex-direction: column; align-items: center;
+      padding: 40px 16px 60px;
+      background-color: #1c0e02;
+      background-image:
+        radial-gradient(ellipse at 20% 0%, rgba(120,65,15,0.55) 0%, transparent 55%),
+        radial-gradient(ellipse at 80% 100%, rgba(100,50,10,0.45) 0%, transparent 55%),
+        repeating-conic-gradient(rgba(255,200,100,0.035) 0% 25%, transparent 0% 50%);
+      background-size: auto, auto, 52px 52px;
+    }
+
+    /* ── Header ── */
+    .app-header { text-align: center; margin-bottom: 30px; }
+    .app-title {
+      font-size: 2rem; font-weight: 900;
+      color: #f5e0b0; letter-spacing: -0.5px; margin-bottom: 8px;
+      text-shadow: 0 2px 12px rgba(0,0,0,0.5);
+    }
+    .app-sub {
+      font-size: 0.95rem;
+      color: rgba(245,220,160,0.72);
+      font-weight: 500;
+    }
+
+    /* ── Section card ── */
+    .sect-card {
+      background: linear-gradient(160deg, #fdf8ef 0%, #f7f0e0 100%);
+      border-radius: 22px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.4), 0 2px 8px rgba(0,0,0,0.18);
+      border: 1px solid rgba(201,162,44,0.28);
+      padding: 28px 32px;
+      width: 100%;
+      max-width: 760px;
+      margin-bottom: 22px;
+    }
+
+    /* ── 문제 재확인 카드 ── */
+    .problem-card {
+      background: linear-gradient(160deg, #fffef7 0%, #fef3c7 100%);
+      border: 2px solid #fcd34d;
+      text-align: center;
+    }
+    .problem-label {
+      font-size: 0.82rem;
+      font-weight: 900;
+      color: #b45309;
+      letter-spacing: 0.18em;
+      margin-bottom: 12px;
+    }
+    .problem-text {
+      font-size: 1.08rem;
+      font-weight: 700;
+      color: #422006;
+      line-height: 1.75;
+    }
+    .problem-text .em {
+      color: #b45309;
+      font-weight: 900;
+      background: linear-gradient(180deg, transparent 60%, #fde68a 60%);
+      padding: 0 4px;
+    }
+    .problem-answer {
+      margin-top: 18px;
+      padding-top: 14px;
+      border-top: 1px dashed rgba(180,83,9,0.35);
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: #15803d;
+    }
+    .problem-answer span {
+      background: rgba(22,163,74,0.12);
+      padding: 4px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(22,163,74,0.35);
+    }
+
+    /* ── 섹션 헤드 ── */
+    .sect-head {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .sect-icon {
+      width: 42px; height: 42px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      color: #fff;
+      font-size: 1.25rem;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      box-shadow: 0 4px 12px rgba(217,119,6,0.35);
+    }
+    .sect-title {
+      font-size: 1.25rem;
+      font-weight: 900;
+      color: #422006;
+      letter-spacing: -0.3px;
+    }
+
+    /* ── 아이디어 박스 ── */
+    .idea-box {
+      background: linear-gradient(135deg, rgba(99,102,241,0.12), rgba(168,85,247,0.08));
+      border-left: 4px solid #6366f1;
+      border-radius: 10px;
+      padding: 16px 20px;
+      margin-bottom: 20px;
+    }
+    .idea-label {
+      font-size: 0.82rem;
+      font-weight: 900;
+      color: #4338ca;
+      letter-spacing: 0.1em;
+      margin-bottom: 6px;
+    }
+    .idea-text {
+      font-size: 1rem;
+      color: #312e81;
+      line-height: 1.7;
+      font-weight: 600;
+    }
+
+    /* ── 증명 단계 ── */
+    .proof-steps {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+    .proof-step {
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+    }
+    .proof-num {
+      flex-shrink: 0;
+      width: 32px; height: 32px;
+      border-radius: 50%;
+      background: #fef3c7;
+      border: 2px solid #f59e0b;
+      color: #b45309;
+      font-size: 0.95rem;
+      font-weight: 900;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .proof-body {
+      flex: 1;
+      font-size: 0.98rem;
+      line-height: 1.8;
+      color: #422006;
+      font-weight: 500;
+      padding-top: 4px;
+    }
+    .proof-body strong {
+      color: #b45309;
+      font-weight: 800;
+    }
+    .proof-body .hl {
+      background: linear-gradient(180deg, transparent 60%, #fde68a 60%);
+      padding: 0 2px;
+    }
+    .proof-why {
+      display: block;
+      margin-top: 6px;
+      padding: 8px 12px;
+      background: rgba(99,102,241,0.08);
+      border-left: 2px solid #818cf8;
+      border-radius: 6px;
+      font-size: 0.88rem;
+      color: #3730a3;
+      font-weight: 500;
+    }
+    .proof-figure {
+      display: flex;
+      justify-content: center;
+      margin: 14px 0 6px;
+    }
+    .proof-figure canvas {
+      background: #fffbeb;
+      border-radius: 12px;
+      border: 2px solid #fcd34d;
+      box-shadow: 0 4px 14px rgba(251,191,36,0.2);
+      max-width: 100%;
+    }
+    .fig-caption {
+      text-align: center;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: #78350f;
+      margin-top: 6px;
+      font-style: italic;
+    }
+
+    .qed {
+      display: inline-block;
+      margin-top: 4px;
+      padding: 4px 14px;
+      background: #422006;
+      color: #fef3c7;
+      border-radius: 6px;
+      font-size: 0.88rem;
+      font-weight: 800;
+      letter-spacing: 1px;
+    }
+
+    /* ── 보조 섹션 ── */
+    .aside-card {
+      background: linear-gradient(160deg, #fef9f0 0%, #fef0d8 100%);
+    }
+    .aside-body {
+      font-size: 0.96rem;
+      color: #422006;
+      line-height: 1.85;
+      font-weight: 500;
+    }
+    .aside-body strong {
+      color: #b45309;
+      font-weight: 800;
+    }
+    .aside-body .quote {
+      display: block;
+      margin-top: 14px;
+      padding: 12px 18px;
+      background: rgba(251,191,36,0.15);
+      border-left: 3px solid #f59e0b;
+      border-radius: 8px;
+      font-weight: 700;
+      color: #78350f;
+    }
+
+    /* ── 아름다운 점 카드 ── */
+    .beauty-card {
+      background: linear-gradient(160deg, rgba(168,85,247,0.08), rgba(99,102,241,0.06)), #fdfaff;
+      border-color: rgba(139,92,246,0.3);
+    }
+    .beauty-card .sect-icon {
+      background: linear-gradient(135deg, #8b5cf6, #6366f1);
+      box-shadow: 0 4px 12px rgba(139,92,246,0.35);
+    }
+    .beauty-card .sect-title {
+      color: #4c1d95;
+    }
+    .beauty-list {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .beauty-item {
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      padding: 14px 16px;
+      background: rgba(255,255,255,0.6);
+      border-radius: 12px;
+      border: 1px solid rgba(139,92,246,0.15);
+    }
+    .beauty-bullet {
+      flex-shrink: 0;
+      font-size: 1.2rem;
+    }
+    .beauty-text {
+      font-size: 0.95rem;
+      line-height: 1.75;
+      color: #3b0764;
+      font-weight: 500;
+    }
+    .beauty-text strong {
+      color: #6d28d9;
+      font-weight: 800;
+    }
+
+    /* ── Footer ── */
+    footer {
+      margin-top: 24px;
+      font-size: 0.85rem;
+      color: rgba(255,255,255,0.65);
+      text-align: center;
+      font-weight: 500;
+    }
+
+    /* ── 인쇄(PDF)용 스타일 ── */
+    @media print {
+      * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        color-adjust: exact !important;
+      }
+      body {
+        background: #fff !important;
+        padding: 12px !important;
+        display: block !important;
+      }
+      .app-title { color: #422006 !important; text-shadow: none !important; }
+      .app-sub { color: #6b4c24 !important; }
+      .sect-card {
+        box-shadow: none !important;
+        page-break-inside: avoid;
+        break-inside: avoid;
+        margin-bottom: 16px !important;
+      }
+      footer { color: #555 !important; }
+    }
+    @page { size: A4; margin: 14mm 12mm; }
+
+    @media (max-width: 520px) {
+      .sect-card { padding: 22px 20px; }
+      .sect-title { font-size: 1.1rem; }
+      .proof-body { font-size: 0.92rem; }
+    }
+  </style>
+</head>
+<body>
+
+<header class="app-header">
+  <h1 class="app-title">📘 도미노 도전 — 증명 풀이</h1>
+  <p class="app-sub">여러분의 탐구에 대한 하나의 완성된 답안</p>
+</header>
+
+<!-- 문제 재확인 -->
+<div class="sect-card problem-card">
+  <div class="problem-label">🎯 탐구했던 문제</div>
+  <p class="problem-text">
+    8×8 체스판에서 서로 <span class="em">다른 색</span>의 칸 2개를 제거하면,<br>
+    나머지 62칸을 도미노로 <span class="em">항상</span> 채울 수 있을까?
+  </p>
+  <div class="problem-answer">
+    답 <span>네, 언제나 가능합니다.</span>
+  </div>
+</div>
+
+<!-- 증명 -->
+<div class="sect-card">
+  <div class="sect-head">
+    <div class="sect-icon">📖</div>
+    <div class="sect-title">증명</div>
+  </div>
+
+  <!-- 아이디어 박스 -->
+  <div class="idea-box">
+    <div class="idea-label">💡 아이디어</div>
+    <div class="idea-text">
+      체스판을 "모든 칸을 한 번씩 지나 돌아오는 경로"로 바라보자.
+      그러면 복잡한 2차원 문제가 간단한 고리 문제로 바뀝니다.
+    </div>
+  </div>
+
+  <!-- 증명 단계 -->
+  <div class="proof-steps">
+
+    <div class="proof-step">
+      <div class="proof-num">1</div>
+      <div class="proof-body">
+        8×8 체스판에는 <strong>모든 64칸을 한 번씩 지나 출발한 칸으로 돌아오는 경로</strong>가 존재합니다.
+        아래 그림이 그런 경로 중 하나입니다.
+        <div class="proof-figure">
+          <canvas id="fig1Canvas" width="360" height="360"></canvas>
+        </div>
+        <div class="fig-caption">그림 1. 8×8 체스판 위의 순환 경로 (예시)</div>
+      </div>
+    </div>
+
+    <div class="proof-step">
+      <div class="proof-num">2</div>
+      <div class="proof-body">
+        이 경로를 따라가며 지나는 순서대로 칸에 <strong>1번, 2번, 3번, …, 64번</strong>이라고 번호를 매깁니다.
+        그러면 <span class="hl">이웃한 번호의 칸들은 체스판에서 서로 인접</span>해 있습니다.
+        <span class="proof-why">왜 그럴까요? 경로는 인접한 칸으로만 이동했기 때문입니다.</span>
+      </div>
+    </div>
+
+    <div class="proof-step">
+      <div class="proof-num">3</div>
+      <div class="proof-body">
+        체스판에서 <strong>인접한 두 칸은 서로 다른 색</strong>입니다.
+        그래서 1번과 2번은 다른 색, 2번과 3번도 다른 색, ...
+        이렇게 이어지면 <span class="hl">번호 순서대로 색이 번갈아 나타납니다</span>.
+        <span class="proof-why">즉, 홀수 번호 칸들은 모두 같은 색이고, 짝수 번호 칸들도 모두 같은 색입니다.</span>
+      </div>
+    </div>
+
+    <div class="proof-step">
+      <div class="proof-num">4</div>
+      <div class="proof-body">
+        64개 칸을 번호 순서대로 타원 모양 고리로 펼쳐서 생각해봅시다.
+        고리 위에는 <strong>밝은색과 짙은색이 번갈아</strong> 놓여 있습니다.
+        <div class="proof-figure">
+          <canvas id="fig2Canvas" width="360" height="300"></canvas>
+        </div>
+        <div class="fig-caption">그림 2. 순환 경로를 고리로 펼친 모습 (색이 번갈아 나타남)</div>
+      </div>
+    </div>
+
+    <div class="proof-step">
+      <div class="proof-num">5</div>
+      <div class="proof-body">
+        이제 <strong>서로 다른 색 두 칸</strong>을 제거한다고 해봅시다.
+        한 칸은 밝은색(홀수 번호)이고, 다른 한 칸은 짙은색(짝수 번호)입니다.
+        <span class="hl">고리에서 이 두 칸을 빼면 고리가 두 조각으로 끊어집니다.</span>
+      </div>
+    </div>
+
+    <div class="proof-step">
+      <div class="proof-num">6</div>
+      <div class="proof-body">
+        끊어진 <strong>두 조각 모두 칸 수가 짝수</strong>가 됩니다.
+        <span class="proof-why">홀수 번호 칸과 짝수 번호 칸 사이에는 항상 홀수 개의 칸이 놓여 있고, 두 칸을 빼고 나면 짝수가 되기 때문입니다.</span>
+      </div>
+    </div>
+
+    <div class="proof-step">
+      <div class="proof-num">7</div>
+      <div class="proof-body">
+        각 조각은 짝수 개의 칸으로 되어 있고, 이웃한 두 칸은 원래 체스판에서 서로 인접합니다.
+        따라서 <strong>2개씩 짝지어 도미노 하나로 덮을 수 있습니다</strong>.
+        두 조각 모두 완전히 덮이므로, 62칸 전체를 도미노 31개로 빈틈없이 채울 수 있습니다.
+        <div style="margin-top: 10px;">
+          <span class="qed">∎ 증명 끝</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- 같은 색을 제거하면 왜 안 되는가? -->
+<div class="sect-card aside-card">
+  <div class="sect-head">
+    <div class="sect-icon">💡</div>
+    <div class="sect-title">같은 색을 제거하면 왜 안 될까?</div>
+  </div>
+  <div class="aside-body">
+    같은 색 두 칸을 제거하면, 두 칸의 번호가 <strong>둘 다 홀수거나 둘 다 짝수</strong>입니다.
+    그러면 고리를 끊어 생기는 두 조각은 <strong>칸 수가 모두 홀수</strong>가 됩니다.
+    홀수 개의 칸은 도미노로 빈틈없이 나눌 수 없습니다. 도미노 하나가 두 칸을 덮기 때문에,
+    짝지어지지 못한 칸이 반드시 한 칸 남게 되죠.
+
+    <div class="quote">
+      💬 결국 이 문제의 운명을 결정하는 것은 <strong>"제거하는 두 칸의 색"</strong>이었습니다.
+    </div>
+  </div>
+</div>
+
+<!-- 이 증명의 아름다운 점 -->
+<div class="sect-card beauty-card">
+  <div class="sect-head">
+    <div class="sect-icon">✨</div>
+    <div class="sect-title">이 증명의 아름다운 점</div>
+  </div>
+  <div class="beauty-list">
+
+    <div class="beauty-item">
+      <div class="beauty-bullet">🎨</div>
+      <div class="beauty-text">
+        복잡한 <strong>2차원 체스판 문제</strong>를, 훨씬 단순한 <strong>1차원 고리 문제</strong>로 바꾼 것이 핵심입니다.
+        모양이 바뀌어도 문제의 본질은 똑같이 남아 있습니다.
+      </div>
+    </div>
+
+    <div class="beauty-item">
+      <div class="beauty-bullet">🔄</div>
+      <div class="beauty-text">
+        이렇게 <strong>문제를 다른 모습으로 바꿔서 푸는 방법</strong>을 수학자들은 매우 좋아합니다.
+        복잡한 문제를 만났을 때 "다른 각도로 바라볼 수는 없을까?"라고 질문하는 습관이 중요해요.
+      </div>
+    </div>
+
+    <div class="beauty-item">
+      <div class="beauty-bullet">🎯</div>
+      <div class="beauty-text">
+        "색"이라는 아주 단순한 것이 <strong>전체 문제의 답을 결정</strong>했습니다.
+        수학에서는 이렇게 겉보기엔 사소해 보이는 성질이 결정적인 역할을 하는 경우가 자주 있습니다.
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<footer>&copy; 2026 서울사대부중 2학년 수학B 허철호 선생님 · All rights reserved</footer>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════════
+// 그림 1: 8×8 순환 경로 (정적 이미지)
+// ═══════════════════════════════════════════════════════════════════════════
+const BIG_N = 8;
+const BIG_CYCLE = [
+  [0,0],[0,1],[0,2],[0,3],[0,4],[0,5],[0,6],[0,7],
+  [1,7],[1,6],[1,5],[1,4],[1,3],[1,2],[1,1],[2,1],
+  [2,2],[2,3],[2,4],[2,5],[2,6],[2,7],[3,7],[3,6],
+  [3,5],[3,4],[3,3],[3,2],[3,1],[4,1],[4,2],[4,3],
+  [4,4],[4,5],[4,6],[4,7],[5,7],[5,6],[5,5],[5,4],
+  [5,3],[5,2],[5,1],[6,1],[6,2],[6,3],[6,4],[6,5],
+  [6,6],[6,7],[7,7],[7,6],[7,5],[7,4],[7,3],[7,2],
+  [7,1],[7,0],[6,0],[5,0],[4,0],[3,0],[2,0],[1,0],
+];
+
+const LIGHT = '#f0d9b5';
+const DARK = '#b58863';
+
+function drawFig1() {
+  const canvas = document.getElementById('fig1Canvas');
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width;
+  const sz = w / BIG_N;
+
+  // 체스판
+  for (let r = 0; r < BIG_N; r++) for (let c = 0; c < BIG_N; c++) {
+    ctx.fillStyle = (r + c) % 2 === 0 ? LIGHT : DARK;
+    ctx.fillRect(c * sz, r * sz, sz, sz);
+  }
+  ctx.strokeStyle = '#7a4a1a';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(0, 0, w, w);
+
+  // 경로 선
+  ctx.strokeStyle = 'rgba(34,197,94,0.85)';
+  ctx.lineWidth = 3.2;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  for (let i = 0; i < BIG_CYCLE.length; i++) {
+    const [r, c] = BIG_CYCLE[i];
+    const x = c * sz + sz / 2;
+    const y = r * sz + sz / 2;
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  // 닫기
+  const [r0, c0] = BIG_CYCLE[0];
+  ctx.lineTo(c0 * sz + sz / 2, r0 * sz + sz / 2);
+  ctx.stroke();
+
+  // 경로 점
+  for (let i = 0; i < BIG_CYCLE.length; i++) {
+    const [r, c] = BIG_CYCLE[i];
+    const x = c * sz + sz / 2;
+    const y = r * sz + sz / 2;
+    ctx.beginPath();
+    ctx.arc(x, y, 3, 0, Math.PI * 2);
+    ctx.fillStyle = '#d97706';
+    ctx.fill();
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 그림 2: 고리 (색이 번갈아 나타나는 구슬)
+// ═══════════════════════════════════════════════════════════════════════════
+function drawFig2() {
+  const canvas = document.getElementById('fig2Canvas');
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  ctx.clearRect(0, 0, w, h);
+
+  const cx = w / 2, cy = h / 2;
+  const rx = w / 2 - 32;
+  const ry = h / 2 - 28;
+  const total = 32;  // 가독성 위해 32개 구슬만
+
+  // 타원 가이드
+  ctx.setLineDash([3, 5]);
+  ctx.strokeStyle = 'rgba(251,191,36,0.3)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // 구슬 연결선
+  ctx.strokeStyle = 'rgba(217,119,6,0.5)';
+  ctx.lineWidth = 2;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  for (let i = 0; i < total; i++) {
+    const a = -Math.PI / 2 + (2 * Math.PI * i) / total;
+    const x = cx + rx * Math.cos(a);
+    const y = cy + ry * Math.sin(a);
+    if (i === 0) ctx.moveTo(x, y);
+    else ctx.lineTo(x, y);
+  }
+  ctx.closePath();
+  ctx.stroke();
+
+  // 구슬 (색 번갈아)
+  for (let i = 0; i < total; i++) {
+    const a = -Math.PI / 2 + (2 * Math.PI * i) / total;
+    const x = cx + rx * Math.cos(a);
+    const y = cy + ry * Math.sin(a);
+    const isLight = i % 2 === 0;
+    ctx.beginPath();
+    ctx.arc(x, y, 11, 0, Math.PI * 2);
+    ctx.fillStyle = isLight ? LIGHT : DARK;
+    ctx.fill();
+    ctx.strokeStyle = '#7a4a1a';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+
+  // 중앙 안내
+  ctx.fillStyle = '#78350f';
+  ctx.font = "600 12px 'Noto Sans KR', sans-serif";
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('색이 번갈아 나오는 고리', cx, cy - 6);
+  ctx.fillStyle = '#b45309';
+  ctx.font = "500 11px 'Noto Sans KR', sans-serif";
+  ctx.fillText('(실제로는 64개 구슬)', cx, cy + 12);
+}
+
+// Init
+drawFig1();
+drawFig2();
+</script>
+</body>
+</html>

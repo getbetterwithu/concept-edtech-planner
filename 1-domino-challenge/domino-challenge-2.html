@@ -1,0 +1,1885 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>도미노 도전 — 패턴 찾기</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      font-family: 'Noto Sans KR', sans-serif;
+      color: #2c1a07;
+      display: flex; flex-direction: column; align-items: center;
+      padding: 36px 16px 56px;
+      user-select: none;
+      background-color: #1c0e02;
+      background-image:
+        radial-gradient(ellipse at 20% 0%, rgba(120,65,15,0.55) 0%, transparent 55%),
+        radial-gradient(ellipse at 80% 100%, rgba(100,50,10,0.45) 0%, transparent 55%),
+        repeating-conic-gradient(rgba(255,200,100,0.035) 0% 25%, transparent 0% 50%);
+      background-size: auto, auto, 52px 52px;
+    }
+
+    .app-header { text-align: center; margin-bottom: 20px; }
+    .app-title {
+      font-size: 2rem; font-weight: 900;
+      color: #f5e0b0; letter-spacing: -0.5px; margin-bottom: 6px;
+      text-shadow: 0 2px 12px rgba(0,0,0,0.5);
+    }
+    .app-sub { font-size: 0.95rem; color: rgba(245,220,160,0.65); font-weight: 500; }
+
+    /* ── Stage indicator ── */
+    .stage-header {
+      display: flex; flex-direction: column; align-items: center; gap: 10px;
+      margin-bottom: 20px; width: 100%; max-width: 900px;
+    }
+    .stage-dots {
+      display: flex; gap: 10px; align-items: center;
+    }
+    .stage-dot {
+      width: 36px; height: 36px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.85rem; font-weight: 700;
+      background: rgba(255,255,255,0.1);
+      color: rgba(245,220,160,0.4);
+      border: 2px solid rgba(255,255,255,0.1);
+      transition: all 0.3s;
+    }
+    .stage-dot.active {
+      background: linear-gradient(135deg, #c9a22c, #e8c050);
+      color: #2c1a07;
+      border-color: #e8c050;
+      box-shadow: 0 0 14px rgba(201,162,44,0.6);
+    }
+    .stage-dot.done {
+      background: rgba(22,163,74,0.3);
+      color: #4ade80;
+      border-color: #16a34a;
+    }
+    .stage-dot.locked {
+      cursor: not-allowed !important;
+      opacity: 0.35;
+    }
+    .stage-dot.locked::before {
+      content: '🔒';
+      font-size: 0.65rem;
+      position: absolute;
+      transform: translate(14px, -14px);
+    }
+    .stage-dot {
+      position: relative;
+    }
+    .stage-dot:not(.locked):not(.active):hover {
+      background: rgba(255,255,255,0.18);
+      border-color: rgba(232,192,80,0.5);
+    }
+    .stage-connector {
+      width: 32px; height: 2px;
+      background: rgba(255,255,255,0.15);
+      border-radius: 1px;
+    }
+    .stage-desc {
+      font-size: 0.9rem; color: rgba(245,220,160,0.7);
+      font-weight: 500; text-align: center;
+    }
+
+    /* ── Timer ── */
+    .timer-wrap {
+      display: flex; align-items: center; gap: 14px;
+      background: rgba(255,255,255,0.08);
+      backdrop-filter: blur(8px);
+      padding: 10px 24px; border-radius: 20px;
+      border: 1px solid rgba(255,200,100,0.2);
+      margin-bottom: 18px;
+    }
+    .timer-label { font-size: 0.9rem; color: rgba(245,220,160,0.7); font-weight: 600; }
+    .timer-val {
+      font-size: 2rem; font-weight: 900; color: #f5e0b0;
+      font-variant-numeric: tabular-nums;
+      min-width: 60px; text-align: center;
+      transition: color 0.3s;
+    }
+    .timer-val.urgent { color: #f87171; }
+    .timer-bar-wrap {
+      width: 160px; height: 8px;
+      background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden;
+    }
+    .timer-bar {
+      height: 100%; border-radius: 4px;
+      background: linear-gradient(90deg, #16a34a, #86efac);
+      transition: width 1s linear, background 1s;
+    }
+    .timer-bar.urgent { background: linear-gradient(90deg, #dc2626, #f87171); }
+
+    /* ── Main layout ── */
+    .boards-row {
+      display: flex; gap: 24px; align-items: flex-start;
+      justify-content: center; width: 100%;
+      flex-wrap: wrap;
+    }
+
+    /* ── Game card ── */
+    .game-card {
+      background: linear-gradient(160deg, #fdf8ef 0%, #f7f0e0 100%);
+      border-radius: 24px;
+      box-shadow: 0 12px 48px rgba(0,0,0,0.45), 0 2px 8px rgba(0,0,0,0.2);
+      border: 1px solid rgba(201,162,44,0.25);
+      padding: 20px 20px 24px;
+      display: flex; flex-direction: column; align-items: center; gap: 14px;
+      flex: 1; min-width: 280px; max-width: 420px;
+    }
+    .card-title {
+      font-size: 1.1rem; font-weight: 900; color: #2c1a07;
+      text-align: center;
+    }
+    .card-title span {
+      display: inline-block; margin-top: 4px;
+      font-size: 0.82rem; font-weight: 600; color: #8b6010;
+    }
+
+    /* ── Instruction box ── */
+    .instr-box {
+      width: 100%; padding: 10px 14px;
+      border-radius: 12px; font-size: 0.88rem;
+      font-weight: 600; line-height: 1.6; text-align: center;
+      border-left: 4px solid;
+    }
+    .instr-box.same {
+      background: rgba(220,38,38,0.08);
+      border-color: #dc2626; color: #7f1d1d;
+    }
+    .instr-box.diff {
+      background: rgba(22,163,74,0.08);
+      border-color: #16a34a; color: #14532d;
+    }
+    .instr-box.free {
+      /* 3단계에서는 개별 박스 대신 공통 프롬프트를 사용하므로 숨김 */
+      display: none;
+    }
+
+    /* ── 3단계 공통 프롬프트 (두 판 위에 한번만 표시) ── */
+    .stage3-prompt {
+      display: none;
+      flex-direction: column;
+      align-items: center; gap: 6px;
+      width: 100%; max-width: 620px;
+      margin: 0 auto 8px;
+      padding: 18px 24px;
+      background: rgba(99,102,241,0.14);
+      border-radius: 18px;
+      border: 1.5px solid rgba(129,140,248,0.45);
+      box-shadow: 0 4px 20px rgba(99,102,241,0.18);
+      text-align: center;
+    }
+    .stage3-prompt.visible { display: flex; }
+    .stage3-prompt-main {
+      font-size: 1.05rem; font-weight: 700;
+      color: #e0e7ff;
+      line-height: 1.5;
+    }
+    .stage3-prompt-main strong { color: #c7d2fe; }
+    .stage3-prompt-sub {
+      font-size: 0.95rem; font-weight: 600;
+      color: rgba(224,231,255,0.85);
+      line-height: 1.5;
+    }
+    .stage3-prompt-sub strong { color: #fde68a; }
+
+    /* ── Controls ── */
+    .controls {
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: center;
+    }
+    .counter-badge {
+      background: white; border-radius: 10px;
+      padding: 7px 14px; font-size: 0.9rem; font-weight: 600; color: #2c1a07;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      border: 1.5px solid rgba(201,162,44,0.3);
+    }
+    .counter-badge span { color: #c9a22c; font-size: 1.1rem; font-weight: 900; }
+    .btn {
+      background: white; border: 2px solid #ddd; border-radius: 10px;
+      padding: 7px 14px; font-family: 'Noto Sans KR', sans-serif;
+      font-size: 0.85rem; font-weight: 700; color: #6b4c24;
+      cursor: pointer; transition: all 0.15s;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.07);
+    }
+    .btn:hover:not(:disabled) { border-color: #c9a22c; color: #9a6f10; background: #fdf6e0; }
+    .btn:disabled { opacity: 0.35; cursor: default; }
+
+    /* ── Board ── */
+    .board-wrap { position: relative; }
+    .board {
+      display: grid;
+      border-radius: 6px; overflow: hidden;
+      box-shadow:
+        0 0 0 4px #7a4a1a,
+        0 0 0 7px #5a3010,
+        0 8px 32px rgba(0,0,0,0.5);
+      cursor: crosshair;
+    }
+    .sq { position: relative; }
+    .sq.light {
+      background:
+        linear-gradient(135deg, rgba(255,255,255,0.18) 0%, transparent 60%, rgba(0,0,0,0.06) 100%),
+        #f0d9b5;
+    }
+    .sq.dark {
+      background:
+        linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 60%, rgba(0,0,0,0.12) 100%),
+        #b58863;
+    }
+    .sq.gone {
+      cursor: default;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 900; color: rgba(140,30,30,0.8);
+    }
+    .sq.sel::after {
+      content: ''; position: absolute; inset: 3px;
+      border: 3px solid #16a34a; border-radius: 3px; pointer-events: none;
+    }
+    .sq.setup-sel {
+      cursor: default;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 900; color: rgba(140,30,30,0.8);
+    }
+    .sq.setup-sel::before { content: '✕'; }
+    .sq.setup-sel::after { display: none !important; }
+    .sq.setup-hi {
+      outline: 3px solid rgba(201,162,44,0.85);
+      outline-offset: -3px;
+    }
+
+    /* ── Overlay ── */
+    .overlay { position: absolute; inset: 0; pointer-events: none; }
+
+    /* ── Domino ── */
+    .domino {
+      position: absolute; border-radius: 6px; overflow: hidden;
+      pointer-events: all; cursor: pointer; display: flex;
+      z-index: 10; border: 2px solid #1a0f02;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.35);
+      transition: box-shadow 0.12s, transform 0.1s;
+    }
+    .domino:hover { box-shadow: 0 7px 24px rgba(0,0,0,0.45); transform: translateY(-2px); z-index: 50 !important; }
+    .domino.v-dom { flex-direction: column; }
+    .half { flex: 1; display: flex; align-items: center; justify-content: center; }
+    .half.wh { background: #f5f5f0; }
+    .half.bk { background: #1a1a1a; }
+    .domino.h-dom .half:first-child { border-right: 2px solid #1a0f02; }
+    .domino.v-dom .half:first-child { border-bottom: 2px solid #1a0f02; }
+
+    /* ── Domino action buttons ── */
+    .d-acts { position: absolute; inset: 0; opacity: 0; transition: opacity 0.18s; pointer-events: none; }
+    .domino:hover .d-acts, .domino.tapped .d-acts { opacity: 1; pointer-events: all; }
+    .d-btn {
+      position: absolute; border-radius: 50%; border: none;
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: transform 0.15s, box-shadow 0.15s;
+      z-index: 60; line-height: 1;
+    }
+    .d-btn:hover { transform: scale(1.3) !important; }
+    .del-btn {
+      bottom: 2px; right: 2px;
+      background: #fee2e2; color: #b91c1c;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+    }
+
+    /* ── Ghost ── */
+    .ghost {
+      position: absolute; border-radius: 6px; pointer-events: none; z-index: 5;
+      border: 2.5px dashed #16a34a; background: rgba(22,163,74,0.15);
+    }
+    .ghost.bad { border-color: #dc2626; background: rgba(220,38,38,0.15); }
+
+    /* ── Status ── */
+    .status {
+      font-size: 0.9rem; font-weight: 600; min-height: 26px;
+      text-align: center; color: #a07840;
+    }
+    .status.ok   { color: #16a34a; }
+    .status.win  { color: #c9a22c; font-size: 1rem; }
+    .status.err  { color: #dc2626; }
+    .status.info { color: #8b6010; }
+
+    /* ── Result overlay on card ── */
+    .card-result {
+      display: none; flex-direction: column; align-items: center; gap: 10px;
+      padding: 14px; border-radius: 14px; width: 100%;
+      text-align: center; font-weight: 700; font-size: 1rem;
+    }
+    .card-result.success {
+      display: flex;
+      background: rgba(22,163,74,0.1); border: 2px solid #16a34a; color: #14532d;
+    }
+    .card-result.fail {
+      display: flex;
+      background: rgba(220,38,38,0.08); border: 2px solid #dc2626; color: #7f1d1d;
+    }
+    .result-icon { font-size: 2rem; }
+
+    /* ── Bottom panel ── */
+    .bottom-panel {
+      width: 100%; max-width: 900px; margin-top: 24px;
+      display: flex; flex-direction: column; align-items: center; gap: 14px;
+    }
+
+    /* ── Timeout choice buttons ── */
+    .choice-panel {
+      display: none; flex-direction: column; align-items: center; gap: 12px;
+      background: rgba(255,255,255,0.07); backdrop-filter: blur(8px);
+      border-radius: 20px; padding: 20px 28px;
+      border: 1px solid rgba(255,200,100,0.2);
+      width: 100%; max-width: 560px;
+    }
+    .choice-panel.visible { display: flex; }
+    .choice-title {
+      font-size: 1rem; font-weight: 700; color: #f5e0b0; text-align: center;
+    }
+    .choice-title small { display: block; font-size: 0.82rem; font-weight: 500; color: rgba(245,220,160,0.6); margin-top: 4px; }
+    .choice-btns { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+    .choice-btn {
+      padding: 12px 22px; border-radius: 14px; border: 2px solid;
+      font-family: 'Noto Sans KR', sans-serif; font-size: 0.92rem; font-weight: 700;
+      cursor: pointer; transition: all 0.15s;
+    }
+    .choice-btn.possible {
+      background: rgba(22,163,74,0.15); border-color: #16a34a; color: #4ade80;
+    }
+    .choice-btn.possible:hover { background: rgba(22,163,74,0.3); }
+    .choice-btn.impossible {
+      background: rgba(220,38,38,0.12); border-color: #dc2626; color: #f87171;
+    }
+    .choice-btn.impossible:hover { background: rgba(220,38,38,0.25); }
+
+    /* ── Choice panel: pending (cooldown) vs ready (activated) ── */
+    .choice-panel.pending .choice-title { color: rgba(245,220,160,0.55); }
+    .choice-panel.pending .choice-btn {
+      background: rgba(255,255,255,0.04) !important;
+      border-color: rgba(255,255,255,0.15) !important;
+      color: rgba(255,255,255,0.35) !important;
+      cursor: not-allowed;
+      pointer-events: none;
+      box-shadow: none;
+      filter: grayscale(1);
+      position: relative;
+    }
+    /* 카운트다운 뱃지 — 비활성 버튼 안에 표시 */
+    .choice-btn .choice-cd {
+      display: block;
+      margin-top: 6px;
+      font-size: 0.78rem;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      color: rgba(255,255,255,0.55);
+    }
+    /* 1분 경과 시 "불 들어오는" 효과 */
+    @keyframes lightUp {
+      0%   { filter: grayscale(1) brightness(0.6); box-shadow: none; }
+      30%  { filter: grayscale(0) brightness(1.4);
+             box-shadow: 0 0 0 4px rgba(232,192,80,0.0); }
+      55%  { filter: grayscale(0) brightness(1.15);
+             box-shadow: 0 0 24px 6px rgba(232,192,80,0.55); }
+      100% { filter: grayscale(0) brightness(1);
+             box-shadow: 0 0 14px 2px rgba(232,192,80,0.25); }
+    }
+    @keyframes readyPulse {
+      0%, 100% { box-shadow: 0 0 14px 2px rgba(232,192,80,0.25); }
+      50%      { box-shadow: 0 0 20px 4px rgba(232,192,80,0.45); }
+    }
+    .choice-panel.ready .choice-btn {
+      animation: lightUp 0.9s ease-out, readyPulse 2.4s ease-in-out 0.9s infinite;
+    }
+    .choice-panel.ready .choice-btn.possible {
+      background: rgba(22,163,74,0.22); color: #86efac;
+      border-color: #22c55e;
+    }
+    .choice-panel.ready .choice-btn.impossible {
+      background: rgba(220,38,38,0.2); color: #fca5a5;
+      border-color: #ef4444;
+    }
+    .choice-panel.ready .choice-title { color: #f5e0b0; }
+
+    /* ── 3단계 순차 질문 패널 (밝은 톤, 체스판 상단 배치) ── */
+    .question-panel {
+      display: none;
+      flex-direction: column; align-items: stretch; gap: 14px;
+      width: 100%; max-width: 920px;
+      margin-bottom: 24px;
+    }
+    .question-panel.visible {
+      display: flex;
+      animation: qPanelEnter 0.7s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    @keyframes qPanelEnter {
+      0%   { opacity: 0; transform: translateY(-24px) scale(0.96); }
+      60%  { opacity: 1; transform: translateY(4px) scale(1.02); }
+      100% { opacity: 1; transform: translateY(0) scale(1); }
+    }
+    @keyframes qPanelFade {
+      from { opacity: 0; transform: translateY(-8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes glowPulse {
+      0%, 100% { box-shadow: 0 10px 40px rgba(255,214,120,0.35), 0 0 0 3px rgba(255,234,180,0.4); }
+      50%      { box-shadow: 0 14px 48px rgba(255,214,120,0.55), 0 0 0 5px rgba(255,234,180,0.55); }
+    }
+
+    /* 슬롯 컨테이너 — 두 질문을 가로로 배치 */
+    .q-slots {
+      display: flex;
+      gap: 16px;
+      align-items: stretch;
+      justify-content: center;
+    }
+
+    /* 개별 슬롯 — 밝은 크림 배경 카드 */
+    .q-slot {
+      flex: 1;
+      display: none;
+      flex-direction: column; align-items: center; gap: 14px;
+      padding: 24px 26px;
+      background: linear-gradient(180deg, #fffef7 0%, #fff9e6 100%);
+      border-radius: 22px;
+      border: 2.5px solid #fcd34d;
+      box-shadow:
+        0 10px 40px rgba(255,214,120,0.35),
+        0 2px 8px rgba(120,60,0,0.12),
+        inset 0 1px 0 rgba(255,255,255,0.8);
+      transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+    }
+    .q-slot.active {
+      display: flex;
+      flex: 2;
+      animation: qPanelFade 0.5s ease-out, glowPulse 3s ease-in-out 0.9s infinite;
+    }
+    .q-slot.archived {
+      display: flex;
+      flex: 1;
+      padding: 16px 18px;
+      gap: 10px;
+      background: linear-gradient(180deg, #fffdf3 0%, #fdf6d8 100%);
+      border-color: #fde68a;
+      box-shadow: 0 4px 14px rgba(180,130,40,0.18);
+      opacity: 0.96;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .q-slot.archived:hover {
+      opacity: 1;
+      transform: translateY(-2px);
+      border-color: #fbbf24;
+      box-shadow: 0 8px 22px rgba(217,119,6,0.3);
+    }
+    .q-slot.archived::after {
+      content: '✎ 클릭해서 수정';
+      display: block;
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: #a16207;
+      margin-top: 4px;
+      opacity: 0.75;
+    }
+    .q-slot.archived:hover::after {
+      opacity: 1;
+      color: #b45309;
+    }
+
+    .q-label {
+      font-size: 0.82rem; font-weight: 900;
+      color: #78350f; letter-spacing: 1.2px;
+      padding: 6px 16px;
+      background: linear-gradient(135deg, #fde68a, #fcd34d);
+      border-radius: 999px;
+      border: 1.5px solid #f59e0b;
+      box-shadow: 0 2px 8px rgba(245,158,11,0.3);
+      white-space: nowrap;
+    }
+    .q-slot.archived .q-label {
+      font-size: 0.72rem;
+      padding: 4px 12px;
+      background: linear-gradient(135deg, #fef3c7, #fde68a);
+      box-shadow: 0 1px 4px rgba(245,158,11,0.2);
+    }
+
+    .q-main {
+      font-size: 1.12rem; font-weight: 700;
+      color: #422006;
+      text-align: center;
+      line-height: 1.65;
+    }
+    .q-main strong {
+      color: #b45309;
+      background: linear-gradient(180deg, transparent 60%, #fde68a 60%);
+      padding: 0 4px;
+    }
+    .q-slot.archived .q-main {
+      font-size: 0.88rem;
+      line-height: 1.5;
+      color: #78350f;
+    }
+
+    .q-choices {
+      display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; width: 100%;
+    }
+    .q-slot.archived .q-choices { display: none; }
+
+    .q-btn {
+      flex: 1; min-width: 160px;
+      padding: 15px 18px; border-radius: 14px;
+      border: 2px solid #fbbf24;
+      background: linear-gradient(180deg, #ffffff, #fffbeb);
+      color: #78350f;
+      font-family: 'Noto Sans KR', sans-serif;
+      font-size: 0.94rem; font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+      box-shadow: 0 2px 8px rgba(251,191,36,0.2);
+    }
+    .q-btn:hover {
+      background: linear-gradient(180deg, #fffbeb, #fef3c7);
+      border-color: #f59e0b;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 18px rgba(245,158,11,0.35);
+    }
+    .q-btn.selected {
+      background: linear-gradient(180deg, #fef3c7, #fde68a);
+      border-color: #d97706;
+      color: #78350f;
+      box-shadow:
+        0 0 0 3px rgba(251,191,36,0.25),
+        0 6px 20px rgba(217,119,6,0.35);
+      transform: translateY(-1px);
+    }
+
+    .q-reflect {
+      display: none;
+      font-size: 0.94rem; font-weight: 600;
+      color: #3730a3;
+      text-align: center; line-height: 1.65;
+      padding: 14px 18px;
+      background: linear-gradient(180deg, #eef2ff, #e0e7ff);
+      border-left: 3px solid #6366f1;
+      border-radius: 8px;
+      animation: qPanelFade 0.4s ease-out;
+    }
+    .q-slot.active.answered .q-reflect { display: block; }
+    .q-slot.archived .q-reflect { display: none; }
+    .q-reflect small {
+      display: inline-block; margin-top: 4px;
+      font-size: 0.82rem; color: #6366f1; font-weight: 500;
+    }
+
+    /* 축소 카드에 표시되는 "내 답" */
+    .q-archived-answer {
+      display: none;
+      font-size: 0.9rem; font-weight: 700;
+      color: #78350f;
+      padding: 10px 14px;
+      background: linear-gradient(180deg, #fef3c7, #fde68a);
+      border-radius: 10px;
+      border: 1.5px solid #fbbf24;
+      text-align: center;
+      line-height: 1.4;
+    }
+    .q-slot.archived .q-archived-answer { display: block; }
+    .q-archived-answer::before {
+      content: '✓ 내 답: ';
+      color: #b45309;
+      font-weight: 900;
+    }
+
+    .q-next {
+      display: none;
+      align-self: center;
+      padding: 13px 32px; border-radius: 14px; border: none;
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      color: #ffffff;
+      font-family: 'Noto Sans KR', sans-serif;
+      font-size: 0.98rem; font-weight: 900;
+      letter-spacing: 0.3px;
+      cursor: pointer;
+      transition: all 0.2s;
+      box-shadow: 0 6px 22px rgba(217,119,6,0.45);
+      animation: qPanelFade 0.4s ease-out;
+    }
+    .q-next.visible { display: inline-block; }
+    .q-next:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 28px rgba(217,119,6,0.6);
+      background: linear-gradient(135deg, #fbbf24, #f59e0b);
+    }
+
+    .q-finale {
+      display: none;
+      width: 100%;
+      flex-direction: column; align-items: center; gap: 12px;
+      padding: 24px 20px;
+      background: linear-gradient(180deg, #fffef7 0%, #fef3c7 100%);
+      border-radius: 18px;
+      border: 2px solid #fcd34d;
+      box-shadow: 0 8px 28px rgba(251,191,36,0.3);
+      animation: qPanelFade 0.6s ease-out;
+    }
+    .q-finale.visible { display: flex; }
+    .q-finale-icon { font-size: 2.4rem; }
+    .q-finale-title {
+      font-size: 1.4rem; font-weight: 900;
+      color: #78350f;
+    }
+    .q-finale-text {
+      font-size: 0.98rem; color: #92400e;
+      text-align: center; line-height: 1.8; font-weight: 500;
+    }
+    .q-finale-text strong {
+      color: #b45309;
+      background: linear-gradient(180deg, transparent 60%, #fde68a 60%);
+      padding: 0 4px;
+    }
+
+    /* 모바일: 2열 → 세로 스택 */
+    @media (max-width: 720px) {
+      .q-slots {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .q-slot.active, .q-slot.archived {
+        flex: none;
+        width: 100%;
+      }
+      .q-btn { min-width: auto; }
+    }
+
+    /* ── Next stage button ── */
+    .next-btn {
+      display: none; padding: 14px 40px; border-radius: 16px;
+      border: none; font-family: 'Noto Sans KR', sans-serif;
+      font-size: 1.05rem; font-weight: 900; cursor: pointer;
+      background: linear-gradient(135deg, #c9a22c, #e8c050);
+      color: #2c1a07;
+      box-shadow: 0 6px 20px rgba(201,162,44,0.5);
+      transition: all 0.15s;
+    }
+    .next-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 28px rgba(201,162,44,0.6); }
+    .next-btn.visible { display: block; }
+
+    /* ── Final message ── */
+    .final-msg {
+      display: none; flex-direction: column; align-items: center; gap: 14px;
+      background: rgba(255,255,255,0.07); backdrop-filter: blur(8px);
+      border-radius: 24px; padding: 28px 32px;
+      border: 1px solid rgba(255,200,100,0.25);
+      width: 100%; max-width: 700px; text-align: center;
+    }
+    .final-msg.visible { display: flex; }
+    .final-msg h2 { font-size: 1.5rem; font-weight: 900; color: #f5e0b0; }
+    .final-msg p { font-size: 1rem; color: rgba(245,220,160,0.8); line-height: 1.8; font-weight: 500; }
+    .final-msg .highlight {
+      color: #f5e0b0; font-weight: 700;
+      background: rgba(201,162,44,0.2); padding: 2px 8px; border-radius: 6px;
+    }
+
+    footer {
+      margin-top: 36px; font-size: 1rem;
+      color: rgba(255,255,255,0.75); text-align: center; font-weight: 500;
+    }
+  </style>
+</head>
+<body>
+
+<header class="app-header">
+  <h1 class="app-title">도미노 도전 — 패턴 찾기</h1>
+  <p class="app-sub">8×8은 복잡하니까, 먼저 작은 판에서 패턴을 찾아봐요!</p>
+</header>
+
+<!-- Stage indicator -->
+<div class="stage-header">
+  <div class="stage-dots">
+    <div class="stage-dot active" id="dot0">1</div>
+    <div class="stage-connector"></div>
+    <div class="stage-dot" id="dot1">2</div>
+    <div class="stage-connector"></div>
+    <div class="stage-dot" id="dot2">3</div>
+  </div>
+  <div class="stage-desc" id="stageDesc"></div>
+</div>
+
+<!-- Timer -->
+<div class="timer-wrap">
+  <span class="timer-label">남은 시간</span>
+  <span class="timer-val" id="timerVal">3:00</span>
+  <div class="timer-bar-wrap">
+    <div class="timer-bar" id="timerBar" style="width:100%"></div>
+  </div>
+</div>
+
+<!-- 3단계 전용 공통 프롬프트 (두 판에 공통으로 적용되는 지시문) -->
+<div class="stage3-prompt" id="stage3Prompt">
+  <div class="stage3-prompt-main">자유롭게 두 칸을 골라 <strong>패턴을 파악</strong>해보세요</div>
+  <div class="stage3-prompt-sub"><strong>성공 또는 실패</strong>하는 요인은 무엇일까요?</div>
+</div>
+
+<!-- 3단계용 순차 질문 패널 (체스판 상단 배치, 1분 후 자동 등장) -->
+<div class="question-panel" id="questionPanel">
+  <div class="q-slots">
+    <!-- 질문 1 슬롯 -->
+    <div class="q-slot" id="qSlot0">
+      <div class="q-label">🤔 생각해볼 문제 1</div>
+      <div class="q-main">색깔이 <strong>같은 두 칸</strong>을 선택하면…</div>
+      <div class="q-choices">
+        <button class="q-btn" data-qidx="0" data-choice="A">가능한 방법이 있다</button>
+        <button class="q-btn" data-qidx="0" data-choice="B">항상 불가능하다</button>
+      </div>
+      <div class="q-reflect">
+        왜 그렇게 생각하나요?<br>
+        <small>이유를 설명할 수 있을까요?</small>
+      </div>
+      <div class="q-archived-answer"></div>
+    </div>
+
+    <!-- 질문 2 슬롯 -->
+    <div class="q-slot" id="qSlot1">
+      <div class="q-label">🤔 생각해볼 문제 2</div>
+      <div class="q-main">서로 <strong>다른 색</strong> 두 칸을 선택하면…</div>
+      <div class="q-choices">
+        <button class="q-btn" data-qidx="1" data-choice="A">항상 가능하다</button>
+        <button class="q-btn" data-qidx="1" data-choice="B">가능할 때도 있고, 불가능할 때도 있다</button>
+      </div>
+      <div class="q-reflect">
+        왜 그렇게 생각하나요?<br>
+        <small>이유를 설명할 수 있을까요?</small>
+      </div>
+      <div class="q-archived-answer"></div>
+    </div>
+  </div>
+
+  <button class="q-next" id="qNextBtn">다음 질문으로 →</button>
+
+  <!-- 마무리 메시지 (두 질문 모두 답한 후) -->
+  <div class="q-finale" id="qFinale">
+    <div class="q-finale-icon">🎯</div>
+    <div class="q-finale-title">훌륭해요!</div>
+    <div class="q-finale-text">
+      이제 <strong>"왜 그런지"</strong> 차근차근 생각해볼 차례입니다.<br>
+      여러분의 생각을 글로 정리하며 이 문제의 비밀을 탐험해봐요.
+    </div>
+  </div>
+</div>
+
+<!-- Two boards side by side -->
+<div class="boards-row" id="boardsRow">
+
+  <!-- 6x6 board card -->
+  <div class="game-card" id="card6">
+    <div class="card-title">
+      6 × 6 체스판
+      <span id="instr6Label"></span>
+    </div>
+    <div class="instr-box" id="instr6"></div>
+    <div class="controls">
+      <div class="counter-badge">남은 도미노 <span id="ctr6">17</span></div>
+      <button class="btn" id="undo6Btn" disabled>↩ 취소</button>
+      <button class="btn" id="reset6Btn">↺ 초기화</button>
+    </div>
+    <div class="board-wrap">
+      <div class="board" id="board6"></div>
+      <div class="overlay" id="overlay6"></div>
+    </div>
+    <div class="status" id="status6">두 칸을 선택해 제거한 뒤 도미노를 놓아보세요.</div>
+    <div class="card-result" id="result6">
+      <div class="result-icon" id="resultIcon6"></div>
+      <div id="resultText6"></div>
+    </div>
+  </div>
+
+  <!-- 4x4 board card -->
+  <div class="game-card" id="card4">
+    <div class="card-title">
+      4 × 4 체스판
+      <span id="instr4Label"></span>
+    </div>
+    <div class="instr-box" id="instr4"></div>
+    <div class="controls">
+      <div class="counter-badge">남은 도미노 <span id="ctr4">7</span></div>
+      <button class="btn" id="undo4Btn" disabled>↩ 취소</button>
+      <button class="btn" id="reset4Btn">↺ 초기화</button>
+    </div>
+    <div class="board-wrap">
+      <div class="board" id="board4"></div>
+      <div class="overlay" id="overlay4"></div>
+    </div>
+    <div class="status" id="status4">두 칸을 선택해 제거한 뒤 도미노를 놓아보세요.</div>
+    <div class="card-result" id="result4">
+      <div class="result-icon" id="resultIcon4"></div>
+      <div id="resultText4"></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Bottom panel -->
+<div class="bottom-panel">
+
+  <!-- Timeout choice panel (2단계용 — 기존 가능/불가능 이분 선택) -->
+  <div class="choice-panel" id="choicePanel">
+    <div class="choice-title" id="choiceTitle">
+      <span id="choiceTitleMain">조금 더 시도해보세요</span>
+      <small id="choiceTitleSub">1분이 지나면 선택 버튼이 활성화됩니다</small>
+    </div>
+    <div class="choice-btns">
+      <button class="choice-btn possible" id="choicePossible">성공하는 방법이 있을 것 같아요</button>
+      <button class="choice-btn impossible" id="choiceImpossible">항상 실패인 것 같아요</button>
+    </div>
+  </div>
+
+  <!-- Next stage button -->
+  <button class="next-btn" id="nextBtn">다음 단계로 →</button>
+
+  <!-- Final message (shown after stage ②) -->
+  <div class="final-msg" id="finalMsg">
+    <div style="font-size:2.5rem">🎉</div>
+    <h2>패턴을 발견했나요?</h2>
+    <p>
+      <span class="highlight">1단계: 둘 다 다른 색</span> → 둘 다 성공<br>
+      <span class="highlight">2단계: 둘 다 같은 색</span> → 둘 다 실패<br>
+      <span class="highlight">3단계: 한쪽은 같은 색, 한쪽은 다른 색</span> → 결과가 엇갈렸죠?<br><br>
+      제거하는 두 칸의 <strong>색깔</strong>이 결과를 결정합니다.<br>
+      같은 색 → 불가능 / 다른 색 → 가능!<br><br>
+      <span style="color:#f5e0b0;font-size:1.1rem;font-weight:900;">그런데 정말 다른 색이면 "항상" 가능할까요?</span>
+    </p>
+  </div>
+
+</div>
+
+<footer>서울사대부중 2학년 수학B 허철호 선생님 &copy; All rights reserved</footer>
+
+<script>
+// ── Stage definitions ─────────────────────────────────────────────────────
+// Stage order: 0=③(both diff), 1=①(both same), 2=②(6x6 same, 4x4 diff)
+const STAGES = [
+  {
+    idx: 0,
+    label: '1단계: 다른 색 2개 제거',
+    desc: '6×6과 4×4 모두 — 서로 다른 색의 칸 2개를 골라 없애고 도미노로 채워보세요!',
+    board6: 'diff',  // 다른 색 2개 제거
+    board4: 'diff',
+    instr6: '서로 <strong>다른 색</strong> 2칸을 선택해 제거하세요',
+    instr4: '서로 <strong>다른 색</strong> 2칸을 선택해 제거하세요',
+    successCondition: 'both_win',  // 둘 다 채워야 다음으로
+  },
+  {
+    idx: 1,
+    label: '2단계: 같은 색 2개 제거',
+    desc: '6×6과 4×4 모두 — 같은 색의 칸 2개를 골라 없애고 도미노로 채워보세요!',
+    board6: 'same',
+    board4: 'same',
+    instr6: '<strong>같은 색</strong> 2칸을 선택해 제거하세요',
+    instr4: '<strong>같은 색</strong> 2칸을 선택해 제거하세요',
+    successCondition: 'timer_end',  // 시간 종료 후 선택
+  },
+  {
+    idx: 2,
+    label: '3단계: 자유 탐구',
+    desc: '색깔에 상관없이 두 칸을 골라보세요. 패턴을 파악할 수 있나요?',
+    board6: 'free',
+    board4: 'free',
+    instr6: '자유롭게 두 칸을 골라 <strong>패턴을 파악</strong>해보세요',
+    instr4: '<strong>성공 또는 실패</strong>하는 요인은 무엇일까요?',
+    successCondition: 'timer_end',
+  }
+];
+
+const STAGE_DOT_LABELS = ['1', '2', '3'];
+const TOTAL_TIME = 120; // 1,2단계 기본 — 2분
+// 3단계는 1분 (자유 탐구 + 1분 후 질문 자동 등장)
+const STAGE_DURATIONS = [120, 120, 60];
+function getStageDuration(stageIdx) { return STAGE_DURATIONS[stageIdx] ?? TOTAL_TIME; }
+
+let currentStage = 0;
+// 타이머 전역 변수는 제거 — 모든 타이머 상태는 stageStates[i]에 독립 보관
+// (transient UI용으로만 display 함수에서 사용)
+
+// ── Board state ────────────────────────────────────────────────────────────
+const SIZES = { 6: 6, 4: 4 };
+
+function makeState(N) {
+  return {
+    N,
+    SZ: 56,
+    removedCells: new Set(),
+    occ: Array.from({length: N}, () => Array(N).fill(null)),
+    doms: {},
+    nextId: 1,
+    hist: [],
+    phase: 'setup',  // 'setup' | 'playing'
+    setupData: [],
+    sel: null,
+    drag: null,
+    ghost: null,
+    won: false,
+  };
+}
+
+// ── Per-stage state ────────────────────────────────────────────────────────
+// 각 스테이지(0/1/2)가 자기만의 판 상태(6×6, 4×4)와 타이머/진행 정보를 따로 보관.
+// 스테이지 전환 시 현재 스테이지의 states를 slot에 저장하고, 새 스테이지의 slot에서 로드.
+function makeStageState(idx) {
+  const duration = STAGE_DURATIONS[idx] ?? TOTAL_TIME;
+  return {
+    unlocked: idx === 0,      // 첫 스테이지만 처음부터 해제
+    visited: false,            // 한 번이라도 진입한 적 있는지
+    completed: false,          // 다음 단계로 버튼을 본 적 있는지 (= "열람 모드" 진입)
+    boards: { 6: makeState(6), 4: makeState(4) },
+    totalDuration: duration,   // 이 스테이지의 전체 제한 시간(초)
+    timerSec: duration,
+    timerDone: false,
+    timerInterval: null,       // 각 슬롯이 자기 setInterval ID를 보유 (독립 타이머)
+    cooldownPassed: false,     // 2단계: 1분 쿨다운 경과 여부 (한번 true면 계속 true)
+  };
+}
+const stageStates = [makeStageState(0), makeStageState(1), makeStageState(2)];
+
+// 전역 states는 "현재 활성 스테이지의 boards 레퍼런스"
+let states = stageStates[0].boards;
+
+// ── DOM refs ───────────────────────────────────────────────────────────────
+function domRefs(n) {
+  return {
+    boardEl:  document.getElementById(`board${n}`),
+    overlayEl: document.getElementById(`overlay${n}`),
+    ctrEl:    document.getElementById(`ctr${n}`),
+    statusEl: document.getElementById(`status${n}`),
+    undoBtn:  document.getElementById(`undo${n}Btn`),
+    resetBtn: document.getElementById(`reset${n}Btn`),
+    resultEl: document.getElementById(`result${n}`),
+    resultIcon: document.getElementById(`resultIcon${n}`),
+    resultText: document.getElementById(`resultText${n}`),
+    instrEl:  document.getElementById(`instr${n}`),
+    instrLabel: document.getElementById(`instr${n}Label`),
+  };
+}
+
+const refs = { 6: domRefs(6), 4: domRefs(4) };
+
+const timerValEl  = document.getElementById('timerVal');
+const timerBarEl  = document.getElementById('timerBar');
+const stageDescEl = document.getElementById('stageDesc');
+const choicePanel = document.getElementById('choicePanel');
+const nextBtn     = document.getElementById('nextBtn');
+const finalMsg    = document.getElementById('finalMsg');
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+const k = (r, c) => `${r},${c}`;
+function inBounds(n, r, c) { return r >= 0 && r < n && c >= 0 && c < n; }
+function isLight(r, c) { return (r + c) % 2 === 0; }
+function sqEl(n, r, c) { return refs[n].boardEl.children[r * n + c]; }
+
+function calcSZ() {
+  const availW = Math.min(window.innerWidth - 80, 420);
+  return Math.floor(Math.min(availW / 6, 56));
+}
+
+function canPlace(st, r1, c1, r2, c2) {
+  const { N, removedCells, occ } = st;
+  return inBounds(N, r1, c1) && inBounds(N, r2, c2)
+    && !removedCells.has(k(r1, c1)) && !removedCells.has(k(r2, c2))
+    && occ[r1][c1] === null && occ[r2][c2] === null
+    && Math.abs(r1 - r2) + Math.abs(c1 - c2) === 1;
+}
+
+function snap(st) {
+  st.hist.push({ occ: st.occ.map(row => [...row]), doms: JSON.parse(JSON.stringify(st.doms)), nextId: st.nextId });
+  if (st.hist.length > 80) st.hist.shift();
+}
+
+function undo(n) {
+  const st = states[n]; const r = refs[n];
+  if (!st.hist.length) return;
+  const s = st.hist.pop();
+  st.occ = s.occ; st.doms = s.doms; st.nextId = s.nextId;
+  redraw(n); setStatus(n, '실행 취소되었습니다.');
+}
+
+function place(n, r1, c1, r2, c2) {
+  const st = states[n];
+  if (!canPlace(st, r1, c1, r2, c2)) return false;
+  snap(st);
+  const id = st.nextId++;
+  st.doms[id] = { id, r1, c1, r2, c2, flipped: false };
+  st.occ[r1][c1] = st.occ[r2][c2] = id;
+  redraw(n); return true;
+}
+
+function removeDom(n, id) {
+  const st = states[n]; const d = st.doms[id]; if (!d) return;
+  snap(st);
+  st.occ[d.r1][d.c1] = st.occ[d.r2][d.c2] = null;
+  delete st.doms[id];
+  redraw(n);
+}
+
+// ── Rendering ──────────────────────────────────────────────────────────────
+function makeDomEl(n, d) {
+  const st = states[n]; const SZ = st.SZ;
+  const isH = d.r1 === d.r2;
+  const minR = Math.min(d.r1, d.r2), minC = Math.min(d.c1, d.c2);
+  const el = document.createElement('div');
+  el.id = `d${n}_${d.id}`;
+  el.className = `domino ${isH ? 'h-dom' : 'v-dom'}`;
+  el.style.cssText = `left:${minC*SZ+2}px;top:${minR*SZ+2}px;`
+    + `width:${isH?SZ*2-4:SZ-4}px;height:${isH?SZ-4:SZ*2-4}px;z-index:${10+d.id};`;
+  const h1 = document.createElement('div');
+  const h2 = document.createElement('div');
+  h1.className = 'half ' + (d.flipped ? 'bk' : 'wh');
+  h2.className = 'half ' + (d.flipped ? 'wh' : 'bk');
+  el.append(h1, h2);
+  const acts = document.createElement('div'); acts.className = 'd-acts';
+  const delBtn = document.createElement('button');
+  delBtn.className = 'd-btn del-btn';
+  delBtn.style.cssText = `width:${Math.round(SZ*0.4)}px;height:${Math.round(SZ*0.4)}px;font-size:${Math.round(SZ*0.2)}px;`;
+  delBtn.textContent = '✕';
+  delBtn.addEventListener('mousedown', e => e.stopPropagation());
+  delBtn.addEventListener('click', e => { e.stopPropagation(); removeDom(n, d.id); });
+  acts.appendChild(delBtn);
+  el.appendChild(acts);
+  el.addEventListener('touchstart', e => {
+    if (e.target.closest('.d-btn')) return;
+    e.stopPropagation();
+    const already = el.classList.contains('tapped');
+    document.querySelectorAll('.domino.tapped').forEach(d => d.classList.remove('tapped'));
+    if (!already) el.classList.add('tapped');
+  }, { passive: true });
+  return el;
+}
+
+function redraw(n) {
+  const st = states[n]; const r = refs[n]; const { N, SZ } = st;
+  r.boardEl.style.gridTemplateColumns = `repeat(${N}, ${SZ}px)`;
+  r.boardEl.style.gridTemplateRows    = `repeat(${N}, ${SZ}px)`;
+  r.overlayEl.innerHTML = '';
+  if (st.phase === 'playing') {
+    Object.values(st.doms).forEach(d => r.overlayEl.appendChild(makeDomEl(n, d)));
+  }
+  for (let row = 0; row < N; row++) for (let col = 0; col < N; col++) {
+    const sq = sqEl(n, row, col);
+    sq.style.width = sq.style.height = SZ + 'px';
+    sq.style.fontSize = Math.round(SZ * 0.38) + 'px';
+    if (st.removedCells.has(k(row, col))) {
+      sq.classList.add('gone'); sq.textContent = '✕';
+      sq.classList.remove('sel', 'setup-sel', 'setup-hi');
+    } else if (st.phase === 'setup' && st.setupData.find(s => s.r === row && s.c === col)) {
+      sq.classList.add('setup-sel'); sq.textContent = '';
+      sq.classList.remove('gone', 'sel');
+    } else {
+      sq.classList.remove('gone', 'setup-sel', 'setup-hi'); sq.textContent = '';
+    }
+  }
+  const total = Math.floor((N * N - 2) / 2);
+  const placed = Object.keys(st.doms).length;
+  r.ctrEl.textContent = total - placed;
+  r.undoBtn.disabled = st.hist.length === 0;
+
+  if (st.phase === 'playing') {
+    if (placed === total && !st.won) {
+      st.won = true;
+      showCardResult(n, true);
+      checkStageComplete();
+    } else if (placed > 0 && !st.won) {
+      setStatus(n, `${placed}개 배치 — 남은 도미노: ${total - placed}개`, 'ok');
+    }
+  }
+}
+
+function buildBoard(n) {
+  const st = states[n]; const { N, SZ } = st;
+  const boardEl = refs[n].boardEl;
+  boardEl.innerHTML = '';
+  boardEl.style.gridTemplateColumns = `repeat(${N}, ${SZ}px)`;
+  boardEl.style.gridTemplateRows    = `repeat(${N}, ${SZ}px)`;
+  for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
+    const sq = document.createElement('div');
+    sq.className = 'sq ' + (isLight(r, c) ? 'light' : 'dark');
+    sq.dataset.r = r; sq.dataset.c = c;
+    sq.style.width = sq.style.height = SZ + 'px';
+    boardEl.appendChild(sq);
+  }
+}
+
+// ── Setup (cell selection before game) ────────────────────────────────────
+function getColorConstraint(n) {
+  const stage = STAGES[currentStage];
+  return n === 6 ? stage.board6 : stage.board4;
+}
+
+function handleSetupClick(n, r, c) {
+  const st = states[n];
+  if (st.phase !== 'setup') return;
+  if (st.removedCells.has(k(r, c))) return;
+
+  const idx = st.setupData.findIndex(s => s.r === r && s.c === c);
+  if (idx !== -1) {
+    st.setupData.splice(idx, 1);
+    sqEl(n, r, c).classList.remove('setup-sel');
+    setStatus(n, '첫 번째 칸을 선택하세요.', 'info');
+    redraw(n); return;
+  }
+  if (st.setupData.length >= 2) return;
+
+  // Color constraint check
+  const constraint = getColorConstraint(n);
+  if (st.setupData.length === 1) {
+    const first = st.setupData[0];
+    const firstLight = isLight(first.r, first.c);
+    const thisLight  = isLight(r, c);
+    if (constraint === 'same' && firstLight !== thisLight) {
+      setStatus(n, '같은 색 칸을 선택해야 합니다!', 'err'); return;
+    }
+    if (constraint === 'diff' && firstLight === thisLight) {
+      setStatus(n, '서로 다른 색 칸을 선택해야 합니다!', 'err'); return;
+    }
+  }
+
+  st.setupData.push({ r, c });
+  sqEl(n, r, c).classList.add('setup-sel');
+
+  if (st.setupData.length === 2) {
+    setStatus(n, '2칸 선택 완료! 이제 도미노를 놓으세요.', 'info');
+    // Start the game automatically
+    setTimeout(() => startBoardGame(n), 400);
+  } else {
+    setStatus(n, '두 번째 칸을 선택하세요.', 'info');
+  }
+  redraw(n);
+}
+
+function startBoardGame(n) {
+  const st = states[n];
+  st.removedCells = new Set(st.setupData.map(s => k(s.r, s.c)));
+  st.phase = 'playing';
+  st.hist = [];
+  redraw(n);
+  setStatus(n, '도미노를 놓아보세요!');
+}
+
+// ── Cell click in playing mode ─────────────────────────────────────────────
+function handleCellClick(n, r, c) {
+  const st = states[n];
+  if (st.phase === 'setup') { handleSetupClick(n, r, c); return; }
+  if (st.phase !== 'playing') return;
+  if (!inBounds(st.N, r, c) || st.removedCells.has(k(r, c)) || st.occ[r][c] !== null) {
+    if (st.sel) { sqEl(n, st.sel.r, st.sel.c).classList.remove('sel'); st.sel = null; clearGhost(n); }
+    return;
+  }
+  if (!st.sel) {
+    st.sel = { r, c }; sqEl(n, r, c).classList.add('sel');
+    setStatus(n, '인접한 칸을 클릭하세요.', 'info');
+  } else {
+    const { r: r1, c: c1 } = st.sel;
+    sqEl(n, r1, c1).classList.remove('sel'); st.sel = null; clearGhost(n);
+    if (r === r1 && c === c1) { setStatus(n, '선택 취소.'); return; }
+    if (!place(n, r1, c1, r, c)) setStatus(n, '인접한 빈 칸에만 놓을 수 있습니다.', 'err');
+  }
+}
+
+// ── Ghost ──────────────────────────────────────────────────────────────────
+function showGhost(n, r1, c1, r2, c2) {
+  const st = states[n]; const { SZ } = st;
+  clearGhost(n);
+  const valid = canPlace(st, r1, c1, r2, c2);
+  const isH = r1 === r2;
+  const minR = Math.min(r1, r2), minC = Math.min(c1, c2);
+  st.ghost = document.createElement('div');
+  st.ghost.className = 'ghost' + (valid ? '' : ' bad');
+  st.ghost.style.cssText = `left:${minC*SZ+2}px;top:${minR*SZ+2}px;`
+    + `width:${isH?SZ*2-4:SZ-4}px;height:${isH?SZ-4:SZ*2-4}px;`;
+  refs[n].overlayEl.appendChild(st.ghost);
+}
+function clearGhost(n) { const st = states[n]; if (st.ghost) { st.ghost.remove(); st.ghost = null; } }
+
+// ── Status ─────────────────────────────────────────────────────────────────
+function setStatus(n, msg, cls = '') {
+  refs[n].statusEl.innerHTML = msg;
+  refs[n].statusEl.className = 'status ' + cls;
+}
+
+// ── Card result ────────────────────────────────────────────────────────────
+function showCardResult(n, success) {
+  const el = refs[n].resultEl;
+  const icon = refs[n].resultIcon;
+  const text = refs[n].resultText;
+  el.className = 'card-result ' + (success ? 'success' : 'fail');
+  icon.textContent = success ? '✅' : '❌';
+  text.textContent = success ? '성공! 도미노로 모두 채웠어요!' : '실패. 도미노로 다 채울 수 없었어요.';
+}
+
+// ── Reset board ────────────────────────────────────────────────────────────
+function resetBoard(n) {
+  const st = states[n];
+  st.removedCells = new Set();
+  st.occ = Array.from({length: st.N}, () => Array(st.N).fill(null));
+  st.doms = {}; st.nextId = 1; st.hist = [];
+  st.phase = 'setup'; st.setupData = [];
+  st.sel = null; st.drag = null; st.won = false;
+  clearGhost(n);
+  refs[n].resultEl.className = 'card-result';
+  redraw(n);
+  const constraint = getColorConstraint(n);
+  const msg = constraint === 'same' ? '같은 색 2칸을 선택하세요.'
+            : constraint === 'diff' ? '다른 색 2칸을 선택하세요.'
+            : '원하는 2칸을 자유롭게 선택하세요.';
+  setStatus(n, msg, 'info');
+}
+
+// ── Timer (per-stage independent) ─────────────────────────────────────────
+// 각 슬롯이 자기 setInterval ID를 보유하며 백그라운드에서도 계속 흐른다.
+// 탭 전환해도 타이머는 멈추지 않음.
+function startTimerForStage(stageIdx) {
+  const slot = stageStates[stageIdx];
+  const duration = getStageDuration(stageIdx);
+  slot.totalDuration = duration;
+  slot.timerSec = duration;
+  slot.timerDone = false;
+  slot.cooldownPassed = false;
+  // 현재 활성 스테이지라면 UI 즉시 갱신
+  if (stageIdx === currentStage) updateTimerUI(slot);
+
+  if (slot.timerInterval) clearInterval(slot.timerInterval);
+  slot.timerInterval = setInterval(() => {
+    slot.timerSec--;
+    // 쿨다운 체크 — 2단계만 사용 (1분 경과 후 선택 패널 활성화)
+    // 3단계는 쿨다운 없이 타이머 만료 시점에 질문이 등장
+    if (stageIdx !== 2 && !slot.cooldownPassed && slot.timerSec <= duration - 60) {
+      slot.cooldownPassed = true;
+      if (stageIdx === currentStage) activateChoicePanelUI();
+    }
+    // 현재 활성 스테이지일 때만 UI 업데이트
+    if (stageIdx === currentStage) {
+      updateTimerUI(slot);
+      // 아직 쿨다운 중이면 카운트다운도 갱신 (2단계 전용)
+      if (stageIdx !== 2 && !slot.cooldownPassed && STAGES[stageIdx].successCondition === 'timer_end') {
+        updateChoicePanelCountdown();
+      }
+    }
+    if (slot.timerSec <= 0) {
+      clearInterval(slot.timerInterval);
+      slot.timerInterval = null;
+      slot.timerDone = true;
+      onTimerEndForStage(stageIdx);
+    }
+  }, 1000);
+}
+
+function updateTimerUI(slot) {
+  const m = Math.floor(slot.timerSec / 60);
+  const s = slot.timerSec % 60;
+  timerValEl.textContent = `${m}:${s.toString().padStart(2,'0')}`;
+  const duration = slot.totalDuration || TOTAL_TIME;
+  const ratio = Math.max(0, slot.timerSec / duration);
+  timerBarEl.style.width = (ratio * 100) + '%';
+  const urgent = slot.timerSec <= 30;
+  timerValEl.classList.toggle('urgent', urgent);
+  timerBarEl.classList.toggle('urgent', urgent);
+}
+
+function onTimerEndForStage(stageIdx) {
+  // 백그라운드 스테이지일 수도 있으므로 boards는 해당 slot의 것을 사용
+  const slot = stageStates[stageIdx];
+
+  // 3단계(idx=2)는 "성공" 개념이 없고 질문 기반이므로 별도 처리
+  if (stageIdx === 2) {
+    // 백그라운드에서 만료된 경우도 cooldownPassed 플래그를 켜줘야 재방문 시 복원됨
+    slot.cooldownPassed = true;
+    if (stageIdx === currentStage) {
+      if (!questionPanel.classList.contains('visible')) showQuestionPanelQ1();
+    }
+    return;
+  }
+
+  const s6 = slot.boards[6].won, s4 = slot.boards[4].won;
+  if (s6 && s4) {
+    // 둘 다 성공: 현재 활성 스테이지라면 "다음 단계로" 즉시 노출
+    if (stageIdx === currentStage) showNextBtn();
+    else {
+      // 백그라운드에서 타이머 만료된 경우도 completed 처리해 둠
+      slot.completed = true;
+      if (stageIdx + 1 < STAGES.length) stageStates[stageIdx + 1].unlocked = true;
+    }
+  } else {
+    // timer_end 스테이지: 1분 쿨다운 경과 후 활성화 상태가 정상
+    // 2분 만기 시점에 아직 활성화 안 됐다면 지금 강제 활성화
+    if (stageIdx === currentStage) {
+      if (!slot.cooldownPassed) slot.cooldownPassed = true;
+      activateChoicePanelUI();
+    }
+  }
+}
+
+// ── Stage completion logic ─────────────────────────────────────────────────
+function checkStageComplete() {
+  const stage = STAGES[currentStage];
+  if (stage.successCondition === 'both_win') {
+    if (states[6].won && states[4].won) {
+      // 현재 스테이지의 타이머 정지 (다른 슬롯은 건드리지 않음)
+      const slot = stageStates[currentStage];
+      if (slot.timerInterval) { clearInterval(slot.timerInterval); slot.timerInterval = null; }
+      setTimeout(() => showNextBtn(), 600);
+    }
+  }
+  // For timer_end stages, completion is handled by timer
+}
+
+function showNextBtn() {
+  choicePanel.classList.remove('visible');
+  nextBtn.classList.add('visible');
+  // 이 스테이지는 완료 상태로 표시 + 다음 스테이지 해제
+  const slot = stageStates[currentStage];
+  slot.completed = true;
+  if (currentStage + 1 < STAGES.length) {
+    stageStates[currentStage + 1].unlocked = true;
+  }
+  // 도트 UI 즉시 갱신 (locked 해제 표시)
+  document.querySelectorAll('.stage-dot').forEach((dot, i) => {
+    if (stageStates[i].unlocked) dot.classList.remove('locked');
+    if (stageStates[i].completed && i !== currentStage) dot.classList.add('done');
+  });
+}
+
+// ── Stage navigation ───────────────────────────────────────────────────────
+// 전역 states를 저장된 slot.boards 참조로 갱신 (slot.boards 자체는 loadStage 사이에 바뀌지 않으므로 단순 스왑)
+function saveCurrentStage() {
+  const slot = stageStates[currentStage];
+  slot.boards = states;
+  // timerSec/timerDone/timerInterval은 이미 slot 안에서 직접 관리됨 (전역 변수 없음)
+}
+
+function loadStageState(idx) {
+  const slot = stageStates[idx];
+  states = slot.boards;
+}
+
+function loadStage(idx) {
+  // 잠긴 스테이지는 접근 불가
+  if (!stageStates[idx].unlocked) return;
+
+  // 1) 현재 스테이지 상태를 slot에 저장
+  saveCurrentStage();
+
+  // 2) 스테이지 인덱스 변경 + 새 slot 로드 (타이머는 멈추지 않음 — 각 slot이 독립 보유)
+  currentStage = idx;
+  loadStageState(idx);
+  const stage = STAGES[idx];
+  const slot = stageStates[idx];
+
+  // 3) Dots UI 갱신 (이동 가능 여부 시각화)
+  document.querySelectorAll('.stage-dot').forEach((dot, i) => {
+    dot.classList.remove('active', 'done', 'locked');
+    if (!stageStates[i].unlocked) dot.classList.add('locked');
+    if (i !== idx && stageStates[i].completed) dot.classList.add('done');
+    if (i === idx) dot.classList.add('active');
+  });
+  stageDescEl.textContent = stage.desc;
+
+  // 4) 지시 박스 갱신
+  [6, 4].forEach(n => {
+    const instr = n === 6 ? stage.instr6 : stage.instr4;
+    const constraint = n === 6 ? stage.board6 : stage.board4;
+    refs[n].instrEl.innerHTML = instr;
+    // same/diff/free → 각각 다른 클래스 (free는 숨김 처리됨)
+    refs[n].instrEl.className = 'instr-box '
+      + (constraint === 'same' ? 'same' : constraint === 'diff' ? 'diff' : 'free');
+  });
+  // 3단계 공통 프롬프트 표시/숨김
+  const stage3PromptEl = document.getElementById('stage3Prompt');
+  if (stage3PromptEl) {
+    stage3PromptEl.classList.toggle('visible', idx === 2);
+  }
+
+  // 5) 패널 초기 숨김 — 아래 로직에서 조건에 따라 다시 표시
+  choicePanel.classList.remove('visible');
+  questionPanel.classList.remove('visible');
+  nextBtn.classList.remove('visible');
+  finalMsg.classList.remove('visible');
+
+  if (!slot.visited) {
+    // 첫 방문: 판 리셋 + 타이머 새로 시작
+    slot.visited = true;
+    resetBoard(6); resetBoard(4);
+    startTimerForStage(idx);
+    // timer_end 스테이지 첫 방문: 해당 패널을 "대기 상태"로 노출
+    if (stage.successCondition === 'timer_end') showChoicePanelPending();
+  } else {
+    // 재방문: 저장된 판 상태 그대로 렌더링, 타이머는 계속 흐르는 중 (현재 남은 시간 표시만)
+    redraw(6); redraw(4);
+    updateTimerUI(slot);
+
+    // 재방문 UI 복원: timer_end 스테이지면 쿨다운 상태에 맞춰 패널 복원
+    if (stage.successCondition === 'timer_end') {
+      if (slot.cooldownPassed) {
+        // 이미 1분 경과한 경우
+        if (usesQuestionPanel(idx)) {
+          // 3단계: 질문 패널을 현재 stage3Answers/stage3Active 상태로 복원
+          questionPanel.classList.add('visible');
+          renderStage3Panel();
+        } else {
+          activateChoicePanelUI();
+        }
+      } else {
+        // 아직 쿨다운 중
+        showChoicePanelPending();
+      }
+    }
+
+    // 이미 완료한 스테이지로 돌아온 경우 "다음 단계로" 버튼을 다시 표시
+    // (3단계는 다음 단계가 없으므로 제외)
+    if (slot.completed && idx < STAGES.length - 1) {
+      nextBtn.classList.add('visible');
+    }
+  }
+}
+
+// ── Choice panel states ───────────────────────────────────────────────────
+const choiceTitleMain = document.getElementById('choiceTitleMain');
+const choiceTitleSub = document.getElementById('choiceTitleSub');
+
+// 현재 스테이지가 어느 패널을 써야 하는지 판단
+// 2단계(idx=1): choicePanel (가능/불가능 이분)
+// 3단계(idx=2): questionPanel (순차 질문)
+function usesChoicePanel(stageIdx) { return stageIdx === 1; }
+function usesQuestionPanel(stageIdx) { return stageIdx === 2; }
+
+// 대기(쿨다운) 상태로 패널 표시 (현재 스테이지에 따라 분기)
+function showChoicePanelPending() {
+  if (usesQuestionPanel(currentStage)) {
+    // 3단계는 1분 대기 동안 질문을 숨기고, 경과 후 등장
+    questionPanel.classList.remove('visible');
+    return;
+  }
+  if (!usesChoicePanel(currentStage)) return;
+  choicePanel.classList.add('visible');
+  choicePanel.classList.add('pending');
+  choicePanel.classList.remove('ready');
+  choiceTitleMain.textContent = '조금 더 시도해보세요';
+  choiceTitleSub.textContent = '1분이 지나면 선택 버튼이 활성화됩니다';
+  updateChoicePanelCountdown();
+}
+
+// 대기 → 활성 전환 (1분 쿨다운 경과 시)
+function activateChoicePanelUI() {
+  if (usesQuestionPanel(currentStage)) {
+    // 3단계: 1분 경과 시 질문 패널 첫 질문 자동 등장
+    showQuestionPanelQ1();
+    return;
+  }
+  if (!usesChoicePanel(currentStage)) return;
+  choicePanel.classList.add('visible');
+  choicePanel.classList.remove('pending');
+  choicePanel.classList.add('ready');
+  choiceTitleMain.textContent = '어떻게 생각하나요?';
+  choiceTitleSub.textContent = '충분히 시도해보셨나요? 하나를 선택해주세요';
+  // 카운트다운 뱃지 영역 정리
+  const p = choicePanel.querySelector('#choicePossible');
+  const i = choicePanel.querySelector('#choiceImpossible');
+  if (p) p.querySelector('.choice-cd')?.remove();
+  if (i) i.querySelector('.choice-cd')?.remove();
+}
+
+// ── 3단계 순차 질문 패널 (2열 레이아웃) ────────────────────────────────
+const questionPanel = document.getElementById('questionPanel');
+const qSlot0 = document.getElementById('qSlot0');
+const qSlot1 = document.getElementById('qSlot1');
+const qSlots = [qSlot0, qSlot1];
+const qNextBtn = document.getElementById('qNextBtn');
+const qFinaleEl = document.getElementById('qFinale');
+
+// 각 질문의 선택지 텍스트 (축소 카드에서 답을 표시할 때 사용)
+const STAGE3_CHOICE_TEXTS = [
+  { A: '가능한 방법이 있다',  B: '항상 불가능하다' },
+  { A: '항상 가능하다',       B: '가능할 때도 있고, 불가능할 때도 있다' },
+];
+
+// 3단계 상태: 각 질문의 학생 답변 저장 ('A' | 'B' | null)
+let stage3Answers = [null, null];
+// 현재 활성 질문 인덱스 (0: 첫 질문, 1: 두 번째 질문, 2: 모두 답함 = finale)
+let stage3Active = 0;
+// 수정 모드 플래그 — finale 상태에서 축소 카드를 눌러 되돌아온 경우 true
+// 이 상태에서 "다음" 버튼을 누르면 다른 질문 거치지 않고 바로 finale로 복귀
+let stage3EditingFromFinale = false;
+
+// 슬롯 전체를 현재 상태에 맞게 렌더링
+function renderStage3Panel() {
+  // finale 상태(모두 답함) 처리
+  if (stage3Active >= qSlots.length) {
+    qNextBtn.classList.remove('visible');
+    qSlots.forEach((slot, i) => {
+      slot.classList.remove('active', 'answered');
+      slot.classList.add('archived');
+      const ansKey = stage3Answers[i];
+      const ansText = ansKey ? STAGE3_CHOICE_TEXTS[i][ansKey] : '(미답변)';
+      slot.querySelector('.q-archived-answer').textContent = ansText;
+    });
+    qFinaleEl.classList.add('visible');
+    return;
+  }
+  qFinaleEl.classList.remove('visible');
+
+  qSlots.forEach((slot, i) => {
+    slot.classList.remove('active', 'archived', 'answered');
+
+    if (i === stage3Active) {
+      // 현재 활성 질문
+      slot.classList.add('active');
+      const chosen = stage3Answers[i];
+      const buttons = slot.querySelectorAll('.q-btn');
+      buttons.forEach(btn => {
+        btn.classList.toggle('selected', btn.dataset.choice === chosen);
+      });
+      if (chosen) {
+        slot.classList.add('answered');
+        qNextBtn.classList.add('visible');
+      } else {
+        slot.classList.remove('answered');
+        qNextBtn.classList.remove('visible');
+      }
+      return;
+    }
+
+    // i !== stage3Active: 다른 슬롯 처리
+    // - 수정 모드: 답변이 있는 다른 슬롯은 계속 archived로 유지 (학생이 전체 맥락 볼 수 있게)
+    // - 일반 모드: 이미 답한 질문만 archived, 아직 안 나타난 질문은 숨김
+    if (stage3EditingFromFinale) {
+      // 수정 모드 — 답변이 있으면 archived로 표시
+      if (stage3Answers[i] !== null) {
+        slot.classList.add('archived');
+        const ansKey = stage3Answers[i];
+        const ansText = STAGE3_CHOICE_TEXTS[i][ansKey];
+        slot.querySelector('.q-archived-answer').textContent = ansText;
+      }
+    } else {
+      // 일반 모드 — 과거 질문만 archived, 미래 질문은 숨김
+      if (i < stage3Active) {
+        slot.classList.add('archived');
+        const ansKey = stage3Answers[i];
+        const ansText = ansKey ? STAGE3_CHOICE_TEXTS[i][ansKey] : '(미답변)';
+        slot.querySelector('.q-archived-answer').textContent = ansText;
+      }
+      // i > stage3Active: 숨김 (클래스 없음 → CSS display:none)
+    }
+  });
+
+  // 다음 버튼 텍스트: 수정 모드 > 마지막 질문 > 일반 순으로 판정
+  if (stage3EditingFromFinale) {
+    qNextBtn.textContent = '수정 완료 →';
+  } else if (stage3Active === qSlots.length - 1) {
+    qNextBtn.textContent = '탐구 마치기 →';
+  } else {
+    qNextBtn.textContent = '다음 질문으로 →';
+  }
+}
+
+// 1분 경과 시 호출 — 질문 패널을 처음 등장시킴
+function showQuestionPanelQ1() {
+  // 첫 등장이거나 재방문 복원인지 구분할 필요는 없음 — 현재 stage3Answers/stage3Active 상태로 렌더링
+  if (stage3Active === 0 && stage3Answers[0] === null) {
+    stage3Active = 0;
+  }
+  questionPanel.classList.add('visible');
+  renderStage3Panel();
+}
+
+// 학생이 A 또는 B를 선택
+function handleQChoice(qIdx, which) {
+  // 이미 archived된 질문은 무시 (과거 답 보존)
+  if (qIdx !== stage3Active) return;
+  stage3Answers[qIdx] = which;
+  renderStage3Panel();
+}
+
+// 모든 q-btn에 이벤트 (슬롯마다 2개씩, 총 4개)
+document.querySelectorAll('.q-btn').forEach(btn => {
+  btn.addEventListener('click', e => {
+    e.stopPropagation();  // 부모 슬롯의 archived 클릭 이벤트와 충돌 방지
+    const qIdx = +btn.dataset.qidx;
+    const choice = btn.dataset.choice;
+    handleQChoice(qIdx, choice);
+  });
+});
+
+// archived 슬롯 클릭 시 해당 질문으로 포커스 이동 (답변 수정 허용)
+qSlots.forEach((slot, i) => {
+  slot.addEventListener('click', e => {
+    // archived 상태일 때만 작동
+    if (!slot.classList.contains('archived')) return;
+    // 두 질문 모두 답변된 상태에서 수정하는 경우 = "수정 모드"
+    // 이 경우 다음 버튼을 누르면 바로 finale로 복귀
+    const bothAnswered = stage3Answers[0] !== null && stage3Answers[1] !== null;
+    if (bothAnswered) {
+      stage3EditingFromFinale = true;
+    }
+    stage3Active = i;
+    renderStage3Panel();
+  });
+});
+
+// "다음 질문으로 →" / "탐구 마치기 →" / "수정 완료 →" 버튼
+qNextBtn.addEventListener('click', () => {
+  if (stage3EditingFromFinale) {
+    // 수정 모드: 다른 질문 거치지 않고 바로 finale로 복귀
+    stage3EditingFromFinale = false;
+    stage3Active = qSlots.length;  // finale 상태
+  } else if (stage3Active < qSlots.length - 1) {
+    stage3Active++;
+  } else {
+    // 마지막 질문 답 후 탐구 마치기
+    stage3Active++;  // === qSlots.length, finale 상태
+  }
+  renderStage3Panel();
+});
+
+// 비활성 버튼에 표시할 카운트다운 업데이트 (매초 호출)
+function updateChoicePanelCountdown() {
+  const slot = stageStates[currentStage];
+  if (!slot || slot.cooldownPassed) return;
+  const remaining = Math.max(0, slot.timerSec - (TOTAL_TIME - 60));
+  const mm = Math.floor(remaining / 60);
+  const ss = remaining % 60;
+  const label = `⏱ ${mm}:${ss.toString().padStart(2,'0')}`;
+  const p = choicePanel.querySelector('#choicePossible');
+  const i = choicePanel.querySelector('#choiceImpossible');
+  [p, i].forEach(btn => {
+    if (!btn) return;
+    let cd = btn.querySelector('.choice-cd');
+    if (!cd) {
+      cd = document.createElement('div');
+      cd.className = 'choice-cd';
+      btn.appendChild(cd);
+    }
+    cd.textContent = label;
+  });
+}
+
+function goNextStage() {
+  if (currentStage < STAGES.length - 1) {
+    loadStage(currentStage + 1);
+  } else {
+    // All done — show final message
+    nextBtn.classList.remove('visible');
+    choicePanel.classList.remove('visible');
+    finalMsg.classList.add('visible');
+    // 현재 스테이지의 타이머만 정지 (다른 스테이지 타이머는 건드리지 않음)
+    const slot = stageStates[currentStage];
+    if (slot.timerInterval) { clearInterval(slot.timerInterval); slot.timerInterval = null; }
+    timerValEl.textContent = '완료!';
+    timerValEl.classList.remove('urgent');
+    timerBarEl.style.width = '100%';
+    timerBarEl.classList.remove('urgent');
+    timerBarEl.style.background = 'linear-gradient(90deg, #c9a22c, #e8c050)';
+  }
+}
+
+nextBtn.addEventListener('click', goNextStage);
+// 선택 버튼: 쿨다운 중(pending)이면 무시, 쿨다운 경과 후에만 동작
+function handleChoiceClick() {
+  if (choicePanel.classList.contains('pending')) return;
+  showNextBtn();
+}
+choicePanel.querySelector('#choicePossible').addEventListener('click', handleChoiceClick);
+choicePanel.querySelector('#choiceImpossible').addEventListener('click', handleChoiceClick);
+
+// Stage dots clickable — 해제된 단계로만 자유 이동 (복습 목적)
+document.querySelectorAll('.stage-dot').forEach((dot, idx) => {
+  dot.style.cursor = 'pointer';
+  dot.addEventListener('click', () => {
+    if (idx === currentStage) return;
+    if (!stageStates[idx].unlocked) return;  // 잠긴 단계는 무시
+    loadStage(idx);
+  });
+});
+
+// ── Mouse & touch events (per board) ──────────────────────────────────────
+// 중요: 각 핸들러는 states[n]을 매번 다시 읽는다 (스테이지 전환 시 slot이 바뀌므로
+// 상단에서 한 번 캐시하면 stale reference 문제 발생)
+function attachEvents(n) {
+  const boardEl = refs[n].boardEl;
+
+  boardEl.addEventListener('mousedown', e => {
+    if (e.button !== 0) return;
+    const st = states[n];
+    const sq = e.target.closest('.sq');
+    if (!sq) return;
+    const r = +sq.dataset.r, c = +sq.dataset.c;
+    if (st.phase === 'setup') { handleSetupClick(n, r, c); return; }
+    if (st.phase !== 'playing') return;
+    if (sq.classList.contains('gone') || st.occ[r][c] !== null) return;
+    st.drag = { r, c, sx: e.clientX, sy: e.clientY, moved: false };
+    e.preventDefault();
+  });
+
+  document.addEventListener('mousemove', e => {
+    const st = states[n];
+    if (!st.drag && st.sel && st.phase === 'playing') {
+      const sq = document.elementFromPoint(e.clientX, e.clientY)?.closest(`#board${n} .sq`);
+      if (sq && !sq.classList.contains('gone')) {
+        const r = +sq.dataset.r, c = +sq.dataset.c;
+        if (!(r === st.sel.r && c === st.sel.c)) { showGhost(n, st.sel.r, st.sel.c, r, c); return; }
+      }
+      clearGhost(n); return;
+    }
+    if (!st.drag) return;
+    const dx = e.clientX - st.drag.sx, dy = e.clientY - st.drag.sy;
+    if (!st.drag.moved && Math.abs(dx) + Math.abs(dy) > 6) {
+      st.drag.moved = true;
+      if (st.sel) { sqEl(n, st.sel.r, st.sel.c).classList.remove('sel'); st.sel = null; }
+    }
+    if (!st.drag.moved) return;
+    const sq = document.elementFromPoint(e.clientX, e.clientY)?.closest(`#board${n} .sq`);
+    if (!sq || sq.classList.contains('gone')) { clearGhost(n); return; }
+    showGhost(n, st.drag.r, st.drag.c, +sq.dataset.r, +sq.dataset.c);
+  });
+
+  document.addEventListener('mouseup', e => {
+    const st = states[n];
+    if (!st.drag) return;
+    clearGhost(n);
+    const sq = document.elementFromPoint(e.clientX, e.clientY)?.closest(`#board${n} .sq`);
+    if (!st.drag.moved) { handleCellClick(n, st.drag.r, st.drag.c); }
+    else if (sq && !sq.classList.contains('gone')) {
+      const r = +sq.dataset.r, c = +sq.dataset.c;
+      if (!(r === st.drag.r && c === st.drag.c))
+        if (!place(n, st.drag.r, st.drag.c, r, c)) setStatus(n, '인접한 빈 칸에만 놓을 수 있습니다.', 'err');
+    }
+    st.drag = null;
+  });
+
+  // Touch
+  function sqFromPoint(x, y) {
+    const el = document.elementFromPoint(x, y);
+    return el?.closest(`#board${n} .sq`) || null;
+  }
+  boardEl.addEventListener('touchstart', e => {
+    if (e.touches.length !== 1) return;
+    const st = states[n];
+    const t = e.touches[0];
+    if (!e.target.closest('.domino')) {
+      document.querySelectorAll('.domino.tapped').forEach(d => d.classList.remove('tapped'));
+    }
+    const sq = sqFromPoint(t.clientX, t.clientY);
+    if (!sq) return;
+    const r = +sq.dataset.r, c = +sq.dataset.c;
+    if (st.phase === 'setup') { handleSetupClick(n, r, c); e.preventDefault(); return; }
+    if (st.phase !== 'playing') return;
+    if (sq.classList.contains('gone') || st.occ[r][c] !== null) return;
+    st.drag = { r, c, sx: t.clientX, sy: t.clientY, moved: false };
+    e.preventDefault();
+  }, { passive: false });
+
+  boardEl.addEventListener('touchmove', e => {
+    const st = states[n];
+    if (!st.drag || e.touches.length !== 1) return;
+    const t = e.touches[0];
+    const dx = t.clientX - st.drag.sx, dy = t.clientY - st.drag.sy;
+    if (!st.drag.moved && Math.abs(dx) + Math.abs(dy) > 8) {
+      st.drag.moved = true;
+      if (st.sel) { sqEl(n, st.sel.r, st.sel.c).classList.remove('sel'); st.sel = null; }
+    }
+    if (!st.drag.moved) return;
+    const sq = sqFromPoint(t.clientX, t.clientY);
+    if (!sq || sq.classList.contains('gone')) { clearGhost(n); return; }
+    showGhost(n, st.drag.r, st.drag.c, +sq.dataset.r, +sq.dataset.c);
+    e.preventDefault();
+  }, { passive: false });
+
+  boardEl.addEventListener('touchend', e => {
+    const st = states[n];
+    if (!st.drag) return;
+    clearGhost(n);
+    const t = e.changedTouches[0];
+    const sq = sqFromPoint(t.clientX, t.clientY);
+    if (!st.drag.moved) { handleCellClick(n, st.drag.r, st.drag.c); }
+    else if (sq && !sq.classList.contains('gone')) {
+      const r = +sq.dataset.r, c = +sq.dataset.c;
+      if (!(r === st.drag.r && c === st.drag.c))
+        if (!place(n, st.drag.r, st.drag.c, r, c)) setStatus(n, '인접한 빈 칸에만 놓을 수 있습니다.', 'err');
+    }
+    st.drag = null; e.preventDefault();
+  }, { passive: false });
+
+  refs[n].undoBtn.addEventListener('click', () => undo(n));
+  refs[n].resetBtn.addEventListener('click', () => resetBoard(n));
+}
+
+// ── Resize ─────────────────────────────────────────────────────────────────
+function applySize() {
+  const sz = calcSZ();
+  // 모든 스테이지 슬롯의 판 크기를 동일하게 갱신
+  stageStates.forEach(slot => {
+    slot.boards[6].SZ = sz;
+    slot.boards[4].SZ = sz;
+  });
+  redraw(6); redraw(4);
+}
+window.addEventListener('resize', applySize);
+
+// ── Init ───────────────────────────────────────────────────────────────────
+const initSZ = calcSZ();
+stageStates.forEach(slot => {
+  slot.boards[6].SZ = initSZ;
+  slot.boards[4].SZ = initSZ;
+});
+
+buildBoard(6); buildBoard(4);
+attachEvents(6); attachEvents(4);
+loadStage(0);
+
+// ── 🔧 Developer test shortcuts (선생님 전용, Shift 조합) ─────────────
+// Shift+T: 타이머를 5초로 점프 (만료 직전)
+// Shift+F: 타이머 즉시 만료 (선택/질문 패널 바로 등장)
+// Shift+U: 모든 스테이지 잠금 해제 (자유 이동)
+// e.code를 쓰면 한글 IME 상태여도 물리 키 기반으로 인식됨
+document.addEventListener('keydown', e => {
+  // Shift 필수, 다른 modifier는 금지
+  if (!e.shiftKey || e.metaKey || e.ctrlKey || e.altKey) return;
+  // 입력 필드에서만 무시 (버튼 포커스는 허용 — 학생이 클릭 직후 단축키 쓰는 경우 커버)
+  const tag = (e.target && e.target.tagName) || '';
+  if (/INPUT|TEXTAREA|SELECT/.test(tag)) return;
+
+  const slot = stageStates[currentStage];
+  if (!slot) return;
+
+  // e.code는 물리 키 기반이라 한글/영문 IME와 무관
+  if (e.code === 'KeyT') {
+    e.preventDefault();
+    if (slot.timerInterval) {
+      slot.timerSec = 5;
+      updateTimerUI(slot);
+      console.log('[dev] Shift+T: timer jumped to 5s');
+    } else {
+      console.log('[dev] Shift+T: no active timer');
+    }
+  } else if (e.code === 'KeyF') {
+    e.preventDefault();
+    if (slot.timerInterval) {
+      clearInterval(slot.timerInterval);
+      slot.timerInterval = null;
+      slot.timerSec = 0;
+      slot.timerDone = true;
+      updateTimerUI(slot);
+      onTimerEndForStage(currentStage);
+      console.log('[dev] Shift+F: timer force-finished');
+    } else {
+      console.log('[dev] Shift+F: no active timer');
+    }
+  } else if (e.code === 'KeyU') {
+    e.preventDefault();
+    stageStates.forEach(s => { s.unlocked = true; });
+    document.querySelectorAll('.stage-dot').forEach((dot) => {
+      dot.classList.remove('locked');
+    });
+    console.log('[dev] Shift+U: all stages unlocked');
+  }
+});
+</script>
+</body>
+</html>

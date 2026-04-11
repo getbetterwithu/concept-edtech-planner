@@ -1,0 +1,2421 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>도미노 도전 — 경로 탐험</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      min-height: 100vh;
+      font-family: 'Noto Sans KR', sans-serif;
+      color: #2c1a07;
+      display: flex; flex-direction: column; align-items: center;
+      padding: 36px 16px 56px;
+      user-select: none;
+      background-color: #1c0e02;
+      background-image:
+        radial-gradient(ellipse at 20% 0%, rgba(120,65,15,0.55) 0%, transparent 55%),
+        radial-gradient(ellipse at 80% 100%, rgba(100,50,10,0.45) 0%, transparent 55%),
+        repeating-conic-gradient(rgba(255,200,100,0.035) 0% 25%, transparent 0% 50%);
+      background-size: auto, auto, 52px 52px;
+    }
+
+    /* ── Header ── */
+    .app-header { text-align: center; margin-bottom: 28px; }
+    .app-title {
+      font-size: 2rem; font-weight: 900;
+      color: #f5e0b0; letter-spacing: -0.5px; margin-bottom: 6px;
+      text-shadow: 0 2px 12px rgba(0,0,0,0.5);
+    }
+    .app-sub { font-size: 0.95rem; color: rgba(245,220,160,0.7); font-weight: 500; }
+
+    /* ── Proposition card (맨 위 명제) ── */
+    .prop-card {
+      background: linear-gradient(160deg, #fdf8ef 0%, #f7f0e0 100%);
+      border-radius: 24px;
+      box-shadow: 0 12px 48px rgba(0,0,0,0.45), 0 2px 8px rgba(0,0,0,0.2);
+      border: 1px solid rgba(201,162,44,0.25);
+      padding: 24px 28px;
+      width: 100%; max-width: 720px;
+      margin-bottom: 28px;
+      text-align: center;
+    }
+    .prop-label {
+      font-size: 0.82rem; font-weight: 800; color: #c9a22c;
+      letter-spacing: 0.15em; margin-bottom: 10px;
+    }
+    .prop-text {
+      font-size: 1.08rem; font-weight: 700; color: #2c1a07;
+      line-height: 1.7;
+    }
+    .prop-text .em { color: #b45309; font-weight: 900; }
+    .prop-q {
+      margin-top: 12px;
+      font-size: 0.95rem; font-weight: 600; color: #78350f;
+    }
+
+    /* ── Step cards ── */
+    .step-card {
+      background: linear-gradient(160deg, #fdf8ef 0%, #f7f0e0 100%);
+      border-radius: 24px;
+      box-shadow: 0 12px 48px rgba(0,0,0,0.45), 0 2px 8px rgba(0,0,0,0.2);
+      border: 1px solid rgba(201,162,44,0.25);
+      padding: 28px 30px;
+      width: 100%; max-width: 720px;
+      margin-bottom: 20px;
+      transition: opacity 0.3s;
+    }
+    .step-card.locked {
+      opacity: 0.35;
+      pointer-events: none;
+    }
+
+    .step-head {
+      display: flex; align-items: center; gap: 12px;
+      margin-bottom: 14px;
+    }
+    .step-badge {
+      width: 36px; height: 36px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      color: #fff;
+      font-size: 1rem; font-weight: 900;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+      box-shadow: 0 4px 12px rgba(217,119,6,0.35);
+    }
+    .step-title {
+      font-size: 1.15rem; font-weight: 800; color: #422006;
+      letter-spacing: -0.2px;
+    }
+    .step-desc {
+      font-size: 0.95rem; color: #6b4c24;
+      line-height: 1.65; margin-bottom: 16px;
+      font-weight: 500;
+    }
+    .step-desc strong { color: #b45309; font-weight: 800; }
+
+    /* ── Mission rules block ── */
+    .rules-box {
+      background: rgba(251,191,36,0.1);
+      border-left: 3px solid #f59e0b;
+      border-radius: 8px;
+      padding: 12px 16px;
+      margin-bottom: 18px;
+      font-size: 0.88rem;
+      color: #78350f;
+      line-height: 1.8;
+    }
+    .rules-box strong { color: #b45309; }
+
+    /* ── 4x4 Board canvas ── */
+    .board-wrap {
+      display: flex; flex-direction: column; align-items: center; gap: 14px;
+      margin-bottom: 12px;
+    }
+    .board4 {
+      display: grid;
+      grid-template-columns: repeat(4, var(--sq4, 68px));
+      grid-template-rows: repeat(4, var(--sq4, 68px));
+      gap: 0;
+      border: 4px solid #7a4a1a;
+      border-radius: 6px;
+      overflow: hidden;
+      background: #7a4a1a;
+      position: relative;
+    }
+    .sq4 {
+      position: relative;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.3rem; font-weight: 900;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .sq4.light { background: #f0d9b5; color: #2c1a07; }
+    .sq4.dark  { background: #b58863; color: #fffbeb; }
+    .sq4.adj-hint { box-shadow: inset 0 0 0 3px rgba(34,197,94,0.55); }
+    .sq4:not(.numbered):not(.adj-hint):hover { filter: brightness(1.15); }
+    .sq4.numbered {
+      cursor: default;
+    }
+    .sq4.numbered.last {
+      box-shadow: inset 0 0 0 3px #f59e0b;
+    }
+    .sq4.start {
+      box-shadow: inset 0 0 0 3px #dc2626;
+    }
+    .sq4.numbered.last.start {
+      box-shadow: inset 0 0 0 3px #f59e0b, inset 0 0 0 6px #dc2626;
+    }
+
+    /* × undo button on numbered cell */
+    .sq4 .cell-x {
+      position: absolute;
+      top: 2px; right: 2px;
+      width: 18px; height: 18px;
+      border-radius: 50%;
+      background: rgba(220,38,38,0.9);
+      color: #fff;
+      font-size: 0.72rem;
+      font-weight: 900;
+      display: none;
+      align-items: center; justify-content: center;
+      cursor: pointer;
+      border: none;
+      transition: transform 0.15s;
+    }
+    .sq4.numbered.last .cell-x { display: flex; }
+    .sq4 .cell-x:hover { transform: scale(1.15); background: #dc2626; }
+
+    /* Controls row */
+    .controls {
+      display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; align-items: center;
+    }
+    .btn {
+      background: white; border: 2px solid #e5d9c0; border-radius: 12px;
+      padding: 11px 22px; font-family: 'Noto Sans KR', sans-serif;
+      font-size: 0.92rem; font-weight: 700; color: #6b4c24;
+      cursor: pointer; transition: all 0.15s;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.07);
+    }
+    .btn:hover:not(:disabled) { border-color: #f59e0b; color: #b45309; background: #fffbeb; }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn.primary {
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      border-color: #d97706; color: #fff;
+      box-shadow: 0 4px 14px rgba(217,119,6,0.4);
+    }
+    .btn.primary:hover:not(:disabled) {
+      background: linear-gradient(135deg, #fbbf24, #f59e0b);
+      color: #fff;
+    }
+
+    /* ── Status line ── */
+    .status-line {
+      font-size: 0.92rem; font-weight: 600;
+      text-align: center;
+      padding: 10px 16px;
+      border-radius: 10px;
+      margin-top: 8px;
+      min-height: 42px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .status-line.info {
+      background: rgba(99,102,241,0.1);
+      color: #3730a3;
+    }
+    .status-line.ok {
+      background: rgba(34,197,94,0.12);
+      color: #15803d;
+    }
+    .status-line.win {
+      background: linear-gradient(135deg, rgba(251,191,36,0.25), rgba(217,119,6,0.2));
+      color: #78350f;
+      font-weight: 800;
+      animation: winPulse 1.8s ease-in-out infinite;
+    }
+    .status-line.err {
+      background: rgba(220,38,38,0.12);
+      color: #991b1b;
+    }
+    @keyframes winPulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(251,191,36,0.3); }
+      50%      { box-shadow: 0 0 0 8px rgba(251,191,36,0); }
+    }
+
+    /* "다음 단계로" button */
+    .next-step-btn {
+      display: none;
+      margin-top: 16px;
+      padding: 13px 32px;
+      border-radius: 14px; border: none;
+      background: linear-gradient(135deg, #16a34a, #15803d);
+      color: #fff;
+      font-family: 'Noto Sans KR', sans-serif;
+      font-size: 0.98rem; font-weight: 900;
+      cursor: pointer;
+      box-shadow: 0 6px 22px rgba(21,128,61,0.4);
+      transition: all 0.2s;
+    }
+    .next-step-btn:hover:not(.used) {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 28px rgba(21,128,61,0.55);
+    }
+    .next-step-btn.visible { display: inline-block; }
+    /* 한번 누르면 회색 + 비활성 */
+    .next-step-btn.used {
+      background: #d6d3d1;
+      color: #78716c;
+      box-shadow: none;
+      cursor: not-allowed;
+      pointer-events: none;
+      transform: none;
+    }
+
+    /* 2단계 "번호 넣기" 애니메이션용 */
+    @keyframes numberPop {
+      0%   { transform: scale(0); opacity: 0; }
+      60%  { transform: scale(1.3); opacity: 1; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .sq4.numbered.animate-pop {
+      animation: numberPop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    /* 3단계 카드는 넓게 */
+    #step3Card { max-width: 820px; }
+    #step3Card .board4 { --sq4: 54px; }
+
+    /* ── 3단계: 2열 레이아웃 (원본 판 + 타원 고리) ── */
+    .stage3-layout {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      margin: 12px 0 8px;
+    }
+    .stage3-left, .stage3-right { flex-shrink: 0; }
+    .stage3-left, .stage3-right {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+    .stage3-label {
+      font-size: 0.82rem;
+      font-weight: 800;
+      color: #78350f;
+      background: rgba(251,191,36,0.18);
+      padding: 4px 12px;
+      border-radius: 999px;
+      letter-spacing: 0.3px;
+    }
+    .stage3-arrow {
+      font-size: 1.8rem;
+      color: #b45309;
+      font-weight: 900;
+      padding: 0 8px;
+    }
+    #ringCanvas {
+      background: #fffbeb;
+      border-radius: 16px;
+      border: 2px solid #fcd34d;
+      box-shadow: 0 4px 16px rgba(251,191,36,0.2);
+    }
+
+    /* ── 관찰 박스 (유도 질문) ── */
+    .observation-box {
+      display: none;
+      margin-top: 16px;
+      padding: 16px 20px;
+      background: linear-gradient(135deg, rgba(99,102,241,0.1), rgba(168,85,247,0.08));
+      border-left: 4px solid #6366f1;
+      border-radius: 12px;
+      align-items: center;
+      gap: 14px;
+      animation: qFade 0.5s ease-out;
+    }
+    .observation-box.visible { display: flex; }
+    .obs-icon { font-size: 1.6rem; flex-shrink: 0; }
+    .obs-text {
+      font-size: 0.95rem;
+      color: #3730a3;
+      line-height: 1.65;
+      font-weight: 600;
+    }
+    .obs-text strong { color: #6d28d9; }
+    @keyframes qFade {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* 모바일: 2열 → 세로 */
+    @media (max-width: 640px) {
+      .stage3-arrow { transform: rotate(90deg); }
+      .stage3-layout { flex-wrap: wrap; }
+      #step3Card .board4 { --sq4: 48px; }
+    }
+
+    /* ── 4단계 ── */
+    #step4Card { max-width: 720px; }
+    .phase-indicator {
+      display: flex; align-items: center; justify-content: center;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    .phase-pill {
+      display: flex; align-items: center; gap: 8px;
+      padding: 8px 16px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.5);
+      border: 2px solid #e5d9c0;
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: #78350f;
+      transition: all 0.3s;
+    }
+    .phase-pill.active {
+      background: linear-gradient(135deg, #fde68a, #fcd34d);
+      border-color: #f59e0b;
+      box-shadow: 0 4px 14px rgba(245,158,11,0.35);
+    }
+    .phase-pill.done {
+      background: rgba(22,163,74,0.18);
+      border-color: #16a34a;
+      color: #15803d;
+    }
+    .phase-pill .phase-num {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 22px; height: 22px;
+      border-radius: 50%;
+      background: rgba(0,0,0,0.1);
+      font-size: 0.78rem;
+      font-weight: 900;
+    }
+    .phase-pill.active .phase-num {
+      background: #f59e0b;
+      color: #fff;
+    }
+    .phase-pill.done .phase-num {
+      background: #16a34a;
+      color: #fff;
+    }
+    .phase-connector {
+      width: 30px; height: 2px;
+      background: rgba(201,162,44,0.35);
+    }
+    .stage4-center {
+      display: flex;
+      justify-content: center;
+      margin: 8px 0;
+    }
+    #ringCanvas4 {
+      background: #fffbeb;
+      border-radius: 16px;
+      border: 2px solid #fcd34d;
+      box-shadow: 0 4px 16px rgba(251,191,36,0.2);
+      cursor: pointer;
+    }
+
+    /* ── 5단계 ── */
+    #step5Card { max-width: 760px; }
+    .discovery-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin: 16px 0;
+    }
+    @media (max-width: 640px) {
+      .discovery-grid { grid-template-columns: 1fr; }
+    }
+    .discovery-card {
+      padding: 18px 20px;
+      border-radius: 16px;
+      border: 2px solid;
+      background: #fff;
+    }
+    .discovery-card.fail {
+      border-color: #f87171;
+      background: linear-gradient(160deg, #fef2f2, #fee2e2);
+    }
+    .discovery-card.success {
+      border-color: #4ade80;
+      background: linear-gradient(160deg, #f0fdf4, #dcfce7);
+    }
+    .discovery-head {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 12px;
+    }
+    .discovery-icon { font-size: 1.5rem; }
+    .discovery-title {
+      font-size: 1rem; font-weight: 800;
+    }
+    .discovery-card.fail .discovery-title { color: #991b1b; }
+    .discovery-card.success .discovery-title { color: #14532d; }
+    .discovery-body {
+      font-size: 0.92rem;
+      line-height: 1.7;
+      font-weight: 500;
+    }
+    .discovery-card.fail .discovery-body { color: #7f1d1d; }
+    .discovery-card.success .discovery-body { color: #166534; }
+    .discovery-body strong {
+      font-weight: 800;
+    }
+    .discovery-card.fail .discovery-body strong { color: #b91c1c; }
+    .discovery-card.success .discovery-body strong { color: #15803d; }
+
+    .principle-box {
+      margin-top: 10px;
+      padding: 20px 24px;
+      border-radius: 16px;
+      background: linear-gradient(160deg, #fefce8, #fef9c3);
+      border: 2px solid #fcd34d;
+      box-shadow: 0 4px 14px rgba(251,191,36,0.18);
+    }
+    .principle-label {
+      font-size: 0.95rem; font-weight: 800;
+      color: #78350f;
+      margin-bottom: 12px;
+      letter-spacing: 0.2px;
+    }
+    .principle-body {
+      font-size: 0.94rem;
+      line-height: 1.85;
+      color: #422006;
+      font-weight: 500;
+    }
+    .principle-body strong {
+      color: #b45309;
+      font-weight: 800;
+    }
+
+    /* ── 6단계 ── */
+    #step6Card { max-width: 760px; }
+    #big8Canvas {
+      background: #fffbeb;
+      border-radius: 16px;
+      border: 2px solid #fcd34d;
+      box-shadow: 0 4px 16px rgba(251,191,36,0.2);
+    }
+    .final-box {
+      display: none;
+      margin-top: 20px;
+      padding: 26px 30px;
+      border-radius: 20px;
+      background: linear-gradient(160deg, #fffef7, #fef3c7);
+      border: 2.5px solid #f59e0b;
+      box-shadow: 0 8px 28px rgba(245,158,11,0.35);
+      text-align: center;
+      animation: qFade 0.6s ease-out;
+    }
+    .final-box.visible { display: block; }
+    .final-icon { font-size: 2.6rem; margin-bottom: 6px; }
+    .final-title {
+      font-size: 1.4rem; font-weight: 900;
+      color: #78350f;
+      margin-bottom: 14px;
+    }
+    .final-text {
+      font-size: 0.98rem; line-height: 1.85;
+      color: #422006;
+      font-weight: 500;
+    }
+    .final-text strong {
+      color: #b45309;
+      font-weight: 800;
+      background: linear-gradient(180deg, transparent 60%, #fde68a 60%);
+      padding: 0 3px;
+    }
+
+    /* ── 학생 답 입력 영역 (5, 6단계) ── */
+    .reflect-group {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      margin: 16px 0 8px;
+    }
+    .reflect-q {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .reflect-label {
+      font-size: 0.96rem;
+      font-weight: 800;
+      color: #422006;
+      line-height: 1.55;
+    }
+    .reflect-label strong {
+      color: #b45309;
+    }
+    .reflect-area {
+      width: 100%;
+      padding: 14px 16px;
+      border-radius: 12px;
+      border: 2px solid #fcd34d;
+      background: #fffef7;
+      font-family: 'Noto Sans KR', sans-serif;
+      font-size: 0.94rem;
+      font-weight: 500;
+      color: #2c1a07;
+      line-height: 1.7;
+      resize: vertical;
+      transition: all 0.15s;
+      min-height: 80px;
+    }
+    .reflect-area::placeholder {
+      color: rgba(120,83,9,0.42);
+      font-weight: 400;
+    }
+    .reflect-area:focus {
+      outline: none;
+      border-color: #f59e0b;
+      background: #fff;
+      box-shadow: 0 0 0 4px rgba(251,191,36,0.2);
+    }
+    .reflect-area.big { min-height: 160px; }
+
+    /* 인쇄용 textarea 대체 div (beforeprint 이벤트에서 생성, 평소엔 숨김) */
+    .reflect-area-print {
+      display: none;
+      width: 100%;
+      padding: 14px 16px;
+      border-radius: 12px;
+      border: 1.5px solid #999;
+      background: #fff;
+      color: #000;
+      font-family: 'Noto Sans KR', sans-serif;
+      font-size: 0.94rem;
+      font-weight: 500;
+      line-height: 1.7;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      min-height: 80px;
+    }
+    .reflect-area-print.big { min-height: 160px; }
+
+    .final-text-open {
+      font-size: 1rem;
+      line-height: 1.8;
+      color: #422006;
+      margin-bottom: 18px;
+      text-align: center;
+      font-weight: 500;
+    }
+    .final-text-open strong {
+      color: #b45309;
+      font-weight: 800;
+      background: linear-gradient(180deg, transparent 60%, #fde68a 60%);
+      padding: 0 3px;
+    }
+
+    /* ── 제출 안내 + PDF 버튼 박스 ── */
+    .submit-box {
+      margin-top: 24px;
+      padding: 20px 22px;
+      border-radius: 14px;
+      background: linear-gradient(160deg, #eef2ff, #e0e7ff);
+      border: 2px solid #a5b4fc;
+      text-align: center;
+    }
+    .submit-title {
+      font-size: 1rem;
+      font-weight: 900;
+      color: #3730a3;
+      margin-bottom: 10px;
+    }
+    .submit-body {
+      font-size: 0.92rem;
+      color: #3730a3;
+      line-height: 1.75;
+      margin-bottom: 16px;
+      font-weight: 500;
+    }
+    .submit-body strong {
+      color: #4338ca;
+      font-weight: 800;
+    }
+    .pdf-guide {
+      margin-top: 12px;
+      padding: 10px 14px;
+      background: rgba(255,255,255,0.55);
+      border-radius: 10px;
+      font-size: 0.82rem;
+      line-height: 1.65;
+      color: #4338ca;
+      font-weight: 500;
+    }
+    .pdf-guide strong { color: #312e81; font-weight: 800; }
+
+    /* ── PDF 다운로드 박스 (구 5단계용 — 유지) ── */
+    .pdf-box {
+      margin-top: 22px;
+      padding-top: 20px;
+      border-top: 1.5px dashed rgba(180,83,9,0.35);
+    }
+    .pdf-hint {
+      font-size: 0.86rem;
+      color: #78350f;
+      font-weight: 600;
+      margin-bottom: 12px;
+      opacity: 0.85;
+    }
+    .pdf-btn {
+      padding: 14px 32px;
+      border-radius: 14px;
+      border: none;
+      background: linear-gradient(135deg, #6366f1, #4f46e5);
+      color: #fff;
+      font-family: 'Noto Sans KR', sans-serif;
+      font-size: 1rem;
+      font-weight: 900;
+      cursor: pointer;
+      box-shadow: 0 6px 22px rgba(99,102,241,0.45);
+      transition: all 0.2s;
+    }
+    .pdf-btn:hover {
+      transform: translateY(-2px);
+      background: linear-gradient(135deg, #818cf8, #6366f1);
+      box-shadow: 0 10px 28px rgba(99,102,241,0.6);
+    }
+    .pdf-btn:active { transform: translateY(0); }
+
+    /* ══════════════════════════════════════════════════════════════════ */
+    /* 인쇄(PDF 저장)용 스타일 — 보고서 친화적 레이아웃                    */
+    /* ══════════════════════════════════════════════════════════════════ */
+    @media print {
+      /* 모든 요소가 지정된 배경/색상을 그대로 인쇄하도록 강제              */
+      /* (브라우저 기본 "Background graphics" 체크박스 없이도 색이 살아남) */
+      * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        color-adjust: exact !important;
+      }
+
+      /* 배경/장식 제거 */
+      body {
+        background: #fff !important;
+        color: #000 !important;
+        padding: 12px !important;
+        display: block !important;
+      }
+      /* 헤더/푸터 보존 (보고서 제목으로 활용) */
+      .app-header { margin-bottom: 16px !important; }
+      .app-title {
+        color: #1a0a00 !important;
+        text-shadow: none !important;
+        font-size: 1.6rem !important;
+      }
+      .app-sub {
+        color: #4a3a20 !important;
+      }
+
+      /* 모든 카드는 인쇄 시 테두리만, 그림자 제거 */
+      .step-card, .prop-card {
+        background: #fff !important;
+        box-shadow: none !important;
+        border: 1.5px solid #c9a22c !important;
+        page-break-inside: avoid;
+        break-inside: avoid;
+        padding: 16px 20px !important;
+        margin-bottom: 14px !important;
+        max-width: 100% !important;
+      }
+
+      /* 잠금 해제된 카드만 보이도록 (학생이 진행하지 않은 단계는 인쇄 제외) */
+      .step-card.locked {
+        display: none !important;
+      }
+
+      /* 인쇄 시 숨길 요소들 */
+      .rules-box,
+      .controls,
+      .status-line,
+      .next-step-btn,
+      .pdf-box,
+      .pdf-btn,
+      #resetBtn,
+      #fillDominoBtn,
+      #resetPhaseBtn,
+      #goPhaseBBtn,
+      #unfoldBtn,
+      #numberBtn,
+      #drawBig8Btn,
+      .phase-indicator {
+        display: none !important;
+      }
+
+      /* 텍스트 색은 강하게 (인쇄 잉크 절약용 회색 방지) */
+      .step-title, .step-desc, .prop-text, .discovery-body, .principle-body, .final-text, .obs-text {
+        color: #000 !important;
+      }
+      .step-title { font-size: 1.05rem !important; }
+      .step-desc { font-size: 0.88rem !important; margin-bottom: 10px !important; }
+      .step-desc strong, .prop-text .em, .discovery-body strong,
+      .principle-body strong, .final-text strong, .obs-text strong {
+        color: #b45309 !important;
+      }
+
+      /* 관찰 박스도 보존 */
+      .observation-box {
+        display: flex !important;
+        background: #f9fafb !important;
+        border: 1px solid #d1d5db !important;
+        border-left: 3px solid #6366f1 !important;
+        page-break-inside: avoid;
+      }
+      .obs-text { color: #1e1b4b !important; }
+
+      /* 학생이 쓴 답변 영역 — 인쇄 시 값이 보이도록 */
+      .reflect-q {
+        page-break-inside: avoid;
+        margin-bottom: 10px;
+      }
+      .reflect-label {
+        color: #000 !important;
+        font-size: 0.92rem !important;
+      }
+      /* 인쇄 시 textarea 숨김, 대신 reflect-area-print 표시 */
+      .reflect-area { display: none !important; }
+      .reflect-area-print {
+        display: block !important;
+        background: #fff !important;
+        border: 1.5px solid #999 !important;
+        color: #000 !important;
+        min-height: 60px !important;
+        font-size: 0.9rem !important;
+        padding: 10px 12px !important;
+        box-shadow: none !important;
+      }
+      .reflect-area-print.big { min-height: 120px !important; }
+      .final-text-open { color: #000 !important; }
+      .submit-box {
+        background: #f0f4ff !important;
+        border: 1.5px solid #6366f1 !important;
+        page-break-inside: avoid;
+      }
+      .submit-title, .submit-body { color: #1e1b4b !important; }
+
+      /* 판/캔버스는 보이되 크기 조정 */
+      .board4 {
+        --sq4: 46px !important;
+        border: 2px solid #7a4a1a !important;
+      }
+      canvas {
+        max-width: 100% !important;
+        border: 1px solid #c9a22c !important;
+        page-break-inside: avoid;
+      }
+
+      /* 단계 카드별 쪽 나눔 */
+      #step1Card, #step2Card, #step3Card, #step4Card, #step5Card, #step6Card {
+        page-break-before: auto;
+        page-break-inside: avoid;
+      }
+      #step5Card, #step6Card { page-break-before: auto; }
+
+      /* 5단계 비교 카드 */
+      .discovery-card {
+        background: #fff !important;
+        border: 1.5px solid !important;
+      }
+      .discovery-card.fail { border-color: #dc2626 !important; }
+      .discovery-card.success { border-color: #16a34a !important; }
+
+      /* 원리 박스/최종 박스 */
+      .principle-box {
+        background: #fffbeb !important;
+        border: 1.5px solid #f59e0b !important;
+      }
+      .final-box {
+        background: #fffbeb !important;
+        border: 2px solid #f59e0b !important;
+        box-shadow: none !important;
+        display: block !important;
+      }
+      .final-title { color: #78350f !important; }
+
+      /* 3단계 2열 layout — 인쇄 시 좁으면 쌓이게 */
+      .stage3-layout {
+        gap: 10px !important;
+      }
+
+      /* 불필요한 애니메이션 제거 */
+      * {
+        animation: none !important;
+        transition: none !important;
+      }
+
+      footer {
+        margin-top: 18px !important;
+        color: #555 !important;
+        font-size: 0.8rem !important;
+      }
+    }
+
+    /* A4 페이지 설정 */
+    @page {
+      size: A4;
+      margin: 14mm 12mm;
+    }
+
+    /* ── Placeholder for later steps ── */
+    .placeholder {
+      background: rgba(255,255,255,0.04);
+      border: 2px dashed rgba(201,162,44,0.3);
+      border-radius: 18px;
+      padding: 30px 24px;
+      text-align: center;
+      color: rgba(245,220,160,0.5);
+      font-size: 0.9rem;
+      font-weight: 500;
+      width: 100%; max-width: 720px;
+      margin-bottom: 20px;
+    }
+
+    footer {
+      margin-top: 36px; font-size: 0.85rem;
+      color: rgba(255,255,255,0.6); text-align: center; font-weight: 500;
+    }
+
+    /* Mobile */
+    @media (max-width: 520px) {
+      .step-card { padding: 22px 20px; }
+      .step-title { font-size: 1.02rem; }
+      .board4 { --sq4: 58px; }
+    }
+  </style>
+</head>
+<body>
+
+<header class="app-header">
+  <h1 class="app-title">도미노 도전 — 경로 탐험</h1>
+  <p class="app-sub">단계를 따라가며 스스로 발견해보세요</p>
+</header>
+
+<!-- 증명할 명제 -->
+<div class="prop-card">
+  <div class="prop-label">우리가 탐구하는 문제</div>
+  <p class="prop-text">
+    8×8 체스판에서 서로 <span class="em">다른 색</span>의 칸 2개를 제거하면,<br>
+    나머지 62칸을 도미노로 <span class="em">항상</span> 채울 수 있을까?
+  </p>
+  <p class="prop-q">과연 정말 그럴까요? 4×4 체스판에서 힌트를 찾아봅시다.</p>
+</div>
+
+<!-- 1단계: 경로 그리기 미션 -->
+<div class="step-card" id="step1Card">
+  <div class="step-head">
+    <div class="step-badge">1</div>
+    <div class="step-title">모든 칸을 지나 출발점으로 돌아오기</div>
+  </div>
+  <p class="step-desc">
+    4×4 체스판에서 출발할 칸을 하나 고른 뒤,
+    <strong>모든 16칸을 단 한 번씩 지나서</strong> 다시 출발 칸으로 돌아오는 경로를 만들어보세요.
+  </p>
+  <div class="rules-box">
+    📜 <strong>규칙</strong><br>
+    • 처음 클릭한 칸이 <strong>출발 칸</strong>이 됩니다<br>
+    • 인접한 칸 (위·아래·왼쪽·오른쪽)으로만 이동할 수 있어요<br>
+    • 모든 칸을 <strong>딱 한 번씩</strong>만 지나야 합니다<br>
+    • 마지막 칸에서는 출발 칸과 <strong>인접</strong>해 있어야 해요
+  </div>
+
+  <div class="board-wrap">
+    <div class="board4" id="board4"></div>
+    <div class="controls">
+      <button class="btn" id="resetBtn">↺ 처음부터</button>
+    </div>
+    <div class="status-line info" id="statusLine">출발할 칸을 클릭하세요</div>
+    <button class="next-step-btn" id="toStep2Btn">다음 단계로 →</button>
+  </div>
+</div>
+
+<!-- 2단계: 번호 넣기 -->
+<div class="step-card locked" id="step2Card">
+  <div class="step-head">
+    <div class="step-badge">2</div>
+    <div class="step-title">경로를 분석해봅시다</div>
+  </div>
+  <p class="step-desc">
+    여러분이 만든 경로를 분석하기 위해, 지나간 순서대로 <strong>번호를 매겨봅시다</strong>.
+    출발 칸이 1번, 그 다음 칸이 2번… 이렇게 16번까지요.
+  </p>
+
+  <div class="board-wrap">
+    <div class="board4" id="board4b"></div>
+    <div class="controls">
+      <button class="btn primary" id="numberBtn" disabled>번호 넣기</button>
+    </div>
+    <div class="status-line info" id="statusLine2">먼저 1단계를 완성해 주세요</div>
+    <button class="next-step-btn" id="toStep3Btn">다음 단계로 →</button>
+  </div>
+</div>
+
+<!-- 3단계: 고리로 펼치기 -->
+<div class="step-card locked" id="step3Card">
+  <div class="step-head">
+    <div class="step-badge">3</div>
+    <div class="step-title">경로를 고리로 펼쳐봅시다</div>
+  </div>
+  <p class="step-desc">
+    여러분이 만든 경로를 타원 모양의 <strong>고리</strong>로 펼쳐볼 거예요.
+    4×4 판 위의 경로와 타원 위의 고리는 <strong>같은 경로</strong>입니다, 모양만 다를 뿐이죠.
+  </p>
+
+  <div class="stage3-layout">
+    <div class="stage3-left">
+      <div class="stage3-label">원본 경로</div>
+      <div class="board4" id="board4c"></div>
+    </div>
+    <div class="stage3-arrow">→</div>
+    <div class="stage3-right">
+      <div class="stage3-label">타원 고리</div>
+      <canvas id="ringCanvas" width="300" height="300"></canvas>
+    </div>
+  </div>
+
+  <div class="controls" style="margin-top: 14px;">
+    <button class="btn primary" id="unfoldBtn" disabled>고리로 펼치기</button>
+  </div>
+
+  <div class="status-line info" id="statusLine3">먼저 2단계를 완성해 주세요</div>
+
+  <!-- 유도 질문 (애니메이션 끝난 뒤 등장) -->
+  <div class="observation-box" id="obsBox">
+    <div class="obs-icon">🔍</div>
+    <div class="obs-text">
+      타원 고리 위에 배치된 칸들의 <strong>색</strong>을 잘 보세요.<br>
+      1번, 2번, 3번, 4번… 번호 순서대로 따라가보면 어떤 규칙이 보이나요?
+    </div>
+  </div>
+
+  <button class="next-step-btn" id="toStep4Btn">다음 단계로 →</button>
+</div>
+
+<!-- 4단계: 두 칸 제거 실험 (같은 색 → 다른 색 순차) -->
+<div class="step-card locked" id="step4Card">
+  <div class="step-head">
+    <div class="step-badge">4</div>
+    <div class="step-title">두 칸을 빼보면 어떻게 될까요?</div>
+  </div>
+  <p class="step-desc" id="step4Desc">
+    고리에서 <strong>두 칸</strong>을 빼고 나머지를 도미노로 채울 수 있는지 실험해봅시다.
+    먼저 <strong>같은 색</strong> 두 칸부터 빼볼까요?
+  </p>
+
+  <!-- Sub-phase indicator -->
+  <div class="phase-indicator">
+    <div class="phase-pill active" id="phasePillA">
+      <span class="phase-num">A</span> 같은 색 두 칸
+    </div>
+    <div class="phase-connector"></div>
+    <div class="phase-pill" id="phasePillB">
+      <span class="phase-num">B</span> 다른 색 두 칸
+    </div>
+  </div>
+
+  <div class="stage4-center">
+    <canvas id="ringCanvas4" width="360" height="360"></canvas>
+  </div>
+
+  <div class="status-line info" id="statusLine4">먼저 3단계를 완성해 주세요</div>
+
+  <div class="controls" style="margin-top: 12px;">
+    <button class="btn" id="resetPhaseBtn">↺ 다시 선택</button>
+    <button class="btn primary" id="fillDominoBtn" disabled>도미노로 채워보기</button>
+  </div>
+
+  <!-- 결과 박스 -->
+  <div class="observation-box" id="obsBox4">
+    <div class="obs-icon" id="obsIcon4">🔍</div>
+    <div class="obs-text" id="obsText4"></div>
+  </div>
+
+  <div class="controls" style="margin-top: 14px;">
+    <button class="btn primary" id="goPhaseBBtn" style="display:none;">다른 색으로 실험해보기 →</button>
+  </div>
+
+  <button class="next-step-btn" id="toStep5Btn">다음 단계로 →</button>
+</div>
+
+<!-- 5단계: 스스로 발견한 것 쓰기 -->
+<div class="step-card locked" id="step5Card">
+  <div class="step-head">
+    <div class="step-badge">5</div>
+    <div class="step-title">내가 발견한 것을 직접 정리해봅시다</div>
+  </div>
+  <p class="step-desc">
+    4단계에서 직접 실험했던 두 가지 결과를 떠올려보세요.
+    아래 질문에 <strong>여러분의 말로</strong> 답해보세요. 정답은 없어요 — 직접 관찰한 것을 솔직하게 써보면 됩니다.
+  </p>
+
+  <div class="reflect-group">
+    <div class="reflect-q">
+      <div class="reflect-label">❶ 같은 색 두 칸을 뺐을 때, 고리에는 어떤 일이 일어났나요?</div>
+      <textarea class="reflect-area" rows="3" placeholder="예: 고리가 ___개 조각으로 나뉘었고, 각 조각의 칸 수는 ___"></textarea>
+    </div>
+
+    <div class="reflect-q">
+      <div class="reflect-label">❷ 다른 색 두 칸을 뺐을 때는 어떻게 달랐나요?</div>
+      <textarea class="reflect-area" rows="3" placeholder="내가 관찰한 것을 써보세요"></textarea>
+    </div>
+
+    <div class="reflect-q">
+      <div class="reflect-label">❸ 두 경우의 차이를 만든 <strong>결정적인 이유</strong>는 무엇이었을까요?</div>
+      <textarea class="reflect-area" rows="4" placeholder="고리 위 칸들의 색 순서와 관련지어 설명해보세요"></textarea>
+    </div>
+  </div>
+
+  <button class="next-step-btn" id="toStep6Btn">다음 단계로 →</button>
+</div>
+
+<!-- 6단계: 8×8 일반화 -->
+<div class="step-card locked" id="step6Card">
+  <div class="step-head">
+    <div class="step-badge">6</div>
+    <div class="step-title">그럼 8×8에서도 똑같을까요?</div>
+  </div>
+  <p class="step-desc">
+    4×4에서 발견한 원리를 <strong>8×8</strong>에 어떻게 적용할 수 있을까요?
+    아래 버튼을 누르면 8×8 체스판에 어떤 경로가 존재하는지 볼 수 있어요.
+  </p>
+
+  <div class="board-wrap">
+    <canvas id="big8Canvas" width="440" height="440"></canvas>
+    <div class="controls">
+      <button class="btn primary" id="drawBig8Btn">경로 그리기</button>
+    </div>
+    <div class="status-line info" id="statusLine6">[경로 그리기] 버튼을 눌러 8×8 경로를 확인해보세요</div>
+  </div>
+
+  <!-- 최종 결론 박스: 학생이 직접 증명을 쓰는 자리 -->
+  <div class="final-box" id="finalBox">
+    <div class="final-icon">✍️</div>
+    <div class="final-title">여러분의 증명을 써볼 차례입니다</div>
+    <div class="final-text-open">
+      4×4에서 발견한 것과 위의 8×8 그림을 이용해서,
+      <strong>"8×8 체스판에서 서로 다른 색 두 칸을 제거하면 나머지를 도미노로 항상 채울 수 있다"</strong>는 사실을
+      여러분의 말로 설명해 보세요.
+    </div>
+
+    <div class="reflect-q">
+      <div class="reflect-label">✏️ 나의 증명</div>
+      <textarea class="reflect-area big" rows="8" placeholder="4×4에서 배운 원리가 8×8에서도 왜 그대로 통하는지 설명해보세요.&#10;&#10;(힌트가 필요하다면 이전 단계들을 다시 보거나, 고리 위 색의 규칙을 떠올려보세요)"></textarea>
+    </div>
+
+    <!-- 제출 안내 + PDF 버튼 -->
+    <div class="submit-box">
+      <div class="submit-title">📮 보고서 제출 안내</div>
+      <div class="submit-body">
+        완성한 증명은 <strong>클래스룸에 올라온 보고서 양식</strong>에 작성해서 제출하세요.<br>
+        아래 버튼으로 이 활동 전체를 <strong>PDF로 저장</strong>해서 보고서에 함께 첨부하면 좋아요.
+      </div>
+      <button class="pdf-btn" id="pdfBtn">📄 활동 기록 PDF로 저장하기</button>
+      <div class="pdf-guide">
+        💡 버튼을 누르면 인쇄 창이 열려요.<br>
+        <strong>대상(Destination)</strong>을 <strong>"PDF로 저장 (Save as PDF)"</strong>으로 선택한 뒤 저장하세요.
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<footer>&copy; 2026 서울사대부중 2학년 수학B 허철호 선생님 · All rights reserved</footer>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════════════
+// 1단계: 4×4 경로 그리기 미션
+// ═══════════════════════════════════════════════════════════════════════════
+
+const N = 4;
+const TOTAL = N * N;
+
+// 경로 상태: path[i] = {r, c}, 0번이 출발 칸
+let path = [];
+
+// DOM
+const board4El = document.getElementById('board4');
+const board4bEl = document.getElementById('board4b');
+const statusLine = document.getElementById('statusLine');
+const statusLine2 = document.getElementById('statusLine2');
+const resetBtn = document.getElementById('resetBtn');
+const toStep2Btn = document.getElementById('toStep2Btn');
+const numberBtn = document.getElementById('numberBtn');
+const toStep3Btn = document.getElementById('toStep3Btn');
+const step2Card = document.getElementById('step2Card');
+
+// 보드 빌드 (1단계용)
+function buildBoard4() {
+  board4El.innerHTML = '';
+  for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
+    const sq = document.createElement('div');
+    const isLight = (r + c) % 2 === 0;
+    sq.className = 'sq4 ' + (isLight ? 'light' : 'dark');
+    sq.dataset.r = r; sq.dataset.c = c;
+    // × 버튼 (마지막 번호 칸에만 활성)
+    const x = document.createElement('button');
+    x.className = 'cell-x';
+    x.type = 'button';
+    x.textContent = '×';
+    x.addEventListener('click', e => {
+      e.stopPropagation();
+      undoLast();
+    });
+    sq.appendChild(x);
+    sq.addEventListener('click', () => handleCellClick(r, c));
+    board4El.appendChild(sq);
+  }
+}
+
+// 2단계 보드 빌드 (디스플레이 전용, 클릭 불가)
+function buildBoard4b() {
+  board4bEl.innerHTML = '';
+  for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
+    const sq = document.createElement('div');
+    const isLight = (r + c) % 2 === 0;
+    sq.className = 'sq4 ' + (isLight ? 'light' : 'dark');
+    sq.dataset.r = r; sq.dataset.c = c;
+    sq.style.cursor = 'default';
+    board4bEl.appendChild(sq);
+  }
+}
+
+function sq4El(r, c) { return board4El.children[r * N + c]; }
+function sq4bEl(r, c) { return board4bEl.children[r * N + c]; }
+
+function isAdjacent(a, b) {
+  return Math.abs(a.r - b.r) + Math.abs(a.c - b.c) === 1;
+}
+
+function handleCellClick(r, c) {
+  const clicked = { r, c };
+
+  // 이미 번호 매겨진 칸 클릭 시: 무시 (단, 마지막 칸 클릭해서 경로 닫기는 예외 처리 아래에서)
+  if (path.some(p => p.r === r && p.c === c)) {
+    // 경로 완성 시도: 모든 칸 다 매긴 뒤 출발 칸을 다시 클릭하면 완성 체크
+    if (path.length === TOTAL && path[0].r === r && path[0].c === c) {
+      tryCompleteLoop();
+    }
+    return;
+  }
+
+  // 첫 클릭 = 출발 칸
+  if (path.length === 0) {
+    path.push(clicked);
+    renderPath();
+    setStatus('info', `출발! 인접한 칸으로 이동하세요 (${path.length}/${TOTAL})`);
+    return;
+  }
+
+  // 인접 칸만 허용
+  const last = path[path.length - 1];
+  if (!isAdjacent(clicked, last)) {
+    setStatus('err', '바로 옆 칸(인접한 칸)만 이동할 수 있어요');
+    return;
+  }
+
+  path.push(clicked);
+  renderPath();
+
+  // 16칸 모두 채움 — 이제 출발 칸으로 되돌아올 수 있는지 확인
+  if (path.length === TOTAL) {
+    const canClose = isAdjacent(path[TOTAL - 1], path[0]);
+    if (canClose) {
+      setStatus('ok', `16칸 모두 지났어요! 출발 칸을 다시 클릭해서 경로를 완성하세요`);
+      sq4El(path[0].r, path[0].c).classList.add('adj-hint');
+    } else {
+      setStatus('err', '마지막 칸에서 출발 칸으로 갈 수 없어요. × 를 눌러 되돌아가 보세요');
+    }
+    return;
+  }
+
+  setStatus('info', `${path.length}번째 칸 놓음 — 다음 인접 칸을 클릭하세요`);
+}
+
+function tryCompleteLoop() {
+  if (path.length !== TOTAL) return;
+  if (!isAdjacent(path[TOTAL - 1], path[0])) return;
+  // 경로 완성!
+  completed = true;
+  setStatus('win', '🎉 완성! 모든 칸을 지나 출발점으로 돌아왔어요');
+  toStep2Btn.classList.add('visible');
+  // 시작 칸 강조
+  sq4El(path[0].r, path[0].c).classList.add('start');
+  sq4El(path[0].r, path[0].c).classList.remove('adj-hint');
+  // 보드 클릭 비활성화
+  board4El.style.pointerEvents = 'none';
+}
+
+let completed = false;
+
+function undoLast() {
+  if (path.length === 0 || completed) return;
+  path.pop();
+  renderPath();
+  if (path.length === 0) {
+    setStatus('info', '출발할 칸을 클릭하세요');
+  } else {
+    setStatus('info', `${path.length}번째 칸까지 — 다음 인접 칸을 클릭하세요`);
+  }
+}
+
+function resetMission() {
+  path = [];
+  completed = false;
+  board4El.style.pointerEvents = '';
+  // 모든 칸 초기화
+  for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
+    const sq = sq4El(r, c);
+    sq.classList.remove('numbered', 'last', 'start', 'adj-hint');
+    // 번호 텍스트 제거 (× 버튼은 유지)
+    const existing = sq.querySelector('.num-txt');
+    if (existing) existing.remove();
+  }
+  toStep2Btn.classList.remove('visible');
+  setStatus('info', '출발할 칸을 클릭하세요');
+}
+
+// 이전 칸 → 현재 칸 이동 방향을 나타내는 화살표 문자
+function getArrowFromPrev(prev, curr) {
+  if (!prev) return '●';  // 첫 칸 = 출발
+  const dr = curr.r - prev.r;
+  const dc = curr.c - prev.c;
+  if (dr === -1) return '↑';
+  if (dr === 1)  return '↓';
+  if (dc === -1) return '←';
+  if (dc === 1)  return '→';
+  return '●';
+}
+
+function renderPath() {
+  // 모든 칸에서 numbered/last/adj-hint 클래스 제거 후 현재 path 기준으로 재설정
+  for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
+    const sq = sq4El(r, c);
+    sq.classList.remove('numbered', 'last', 'adj-hint');
+    const txt = sq.querySelector('.num-txt');
+    if (txt) txt.remove();
+  }
+  // 현재 경로의 각 칸에 "이전 칸에서 들어오는 방향" 화살표 표시
+  path.forEach((p, i) => {
+    const sq = sq4El(p.r, p.c);
+    sq.classList.add('numbered');
+    if (i === path.length - 1) sq.classList.add('last');
+    const prev = i === 0 ? null : path[i - 1];
+    const arrow = getArrowFromPrev(prev, p);
+    const span = document.createElement('span');
+    span.className = 'num-txt';
+    span.style.cssText = 'font-size:1.55rem;color:#78350f;font-weight:900;pointer-events:none;line-height:1;';
+    span.textContent = arrow;
+    sq.appendChild(span);
+  });
+}
+
+function setStatus(cls, msg) {
+  statusLine.className = 'status-line ' + cls;
+  statusLine.textContent = msg;
+}
+
+resetBtn.addEventListener('click', resetMission);
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 2단계: 번호 넣기
+// ═══════════════════════════════════════════════════════════════════════════
+
+let step2Unlocked = false;
+let numberingDone = false;
+
+toStep2Btn.addEventListener('click', () => {
+  // 2단계로 진행
+  step2Unlocked = true;
+  step2Card.classList.remove('locked');
+  numberBtn.disabled = false;
+  statusLine2.className = 'status-line info';
+  statusLine2.textContent = '[번호 넣기] 버튼을 눌러 보세요';
+  // 2단계 보드에 1단계 경로 복사 (색만, 번호는 아직 없음)
+  for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
+    const sq = sq4bEl(r, c);
+    sq.classList.remove('numbered', 'last', 'start');
+    sq.innerHTML = '';
+  }
+  // 경로에 속한 칸: 1단계에서 본 화살표를 그대로 복사
+  path.forEach((p, i) => {
+    const sq = sq4bEl(p.r, p.c);
+    sq.classList.add('numbered');
+    const prev = i === 0 ? null : path[i - 1];
+    const arrow = getArrowFromPrev(prev, p);
+    const span = document.createElement('span');
+    span.style.cssText = 'font-size:1.55rem;color:#78350f;font-weight:900;pointer-events:none;line-height:1;';
+    span.textContent = arrow;
+    sq.appendChild(span);
+  });
+  // 출발 칸 표시
+  if (path.length > 0) {
+    sq4bEl(path[0].r, path[0].c).classList.add('start');
+  }
+  // 스크롤 이동
+  step2Card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
+
+numberBtn.addEventListener('click', () => {
+  if (numberingDone) return;
+  numberBtn.disabled = true;
+  numberBtn.textContent = '번호 넣는 중...';
+  statusLine2.className = 'status-line info';
+  statusLine2.textContent = '여러분이 지나간 순서대로 1번부터 16번까지 매깁니다';
+
+  // 기존 ● 점 제거
+  for (let i = 0; i < path.length; i++) {
+    const sq = sq4bEl(path[i].r, path[i].c);
+    sq.innerHTML = '';
+  }
+
+  // 순차 애니메이션: 120ms 간격으로 1~16 등장
+  let i = 0;
+  const timer = setInterval(() => {
+    if (i >= path.length) {
+      clearInterval(timer);
+      numberingDone = true;
+      numberBtn.textContent = '✓ 번호 매김 완료';
+      statusLine2.className = 'status-line win';
+      statusLine2.textContent = '🎉 순서대로 1번부터 16번까지 매겨졌어요!';
+      toStep3Btn.classList.add('visible');
+      return;
+    }
+    const p = path[i];
+    const sq = sq4bEl(p.r, p.c);
+    const txt = document.createElement('span');
+    txt.textContent = i + 1;
+    txt.style.cssText = 'position:relative;z-index:2;pointer-events:none;';
+    sq.appendChild(txt);
+    sq.classList.add('animate-pop');
+    setTimeout(() => sq.classList.remove('animate-pop'), 400);
+    i++;
+  }, 250);
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 3단계: 고리로 펼치기
+// ═══════════════════════════════════════════════════════════════════════════
+
+const step3Card = document.getElementById('step3Card');
+const board4cEl = document.getElementById('board4c');
+const ringCanvas = document.getElementById('ringCanvas');
+const ringCtx = ringCanvas.getContext('2d');
+const unfoldBtn = document.getElementById('unfoldBtn');
+const statusLine3 = document.getElementById('statusLine3');
+const obsBox = document.getElementById('obsBox');
+const toStep4Btn = document.getElementById('toStep4Btn');
+
+// 3단계용 보드 빌드 (복사본, 애니메이션 원본)
+function buildBoard4c() {
+  board4cEl.innerHTML = '';
+  for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
+    const sq = document.createElement('div');
+    const isLight = (r + c) % 2 === 0;
+    sq.className = 'sq4 ' + (isLight ? 'light' : 'dark');
+    sq.dataset.r = r; sq.dataset.c = c;
+    sq.style.cursor = 'default';
+    board4cEl.appendChild(sq);
+  }
+}
+function sq4cEl(r, c) { return board4cEl.children[r * N + c]; }
+
+let step3Unlocked = false;
+let unfoldDone = false;
+// 고리 상태: 'grid' = 격자 상태, 'ring' = 타원 상태, 'animating' = 전환 중
+let ringState = 'grid';
+// 한번이라도 펼쳐본 적이 있는지 (다음 단계로 버튼 표시 조건)
+let hasUnfoldedOnce = false;
+
+toStep3Btn.addEventListener('click', () => {
+  step3Unlocked = true;
+  step3Card.classList.remove('locked');
+  unfoldBtn.disabled = false;
+  unfoldBtn.textContent = '고리로 펼치기';
+  ringState = 'grid';
+  hasUnfoldedOnce = false;
+  obsBox.classList.remove('visible');
+  toStep4Btn.classList.remove('visible');
+  statusLine3.className = 'status-line info';
+  statusLine3.textContent = '[고리로 펼치기] 버튼을 눌러보세요';
+
+  // 원본 판에 2단계 번호를 그대로 복사
+  for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
+    const sq = sq4cEl(r, c);
+    sq.innerHTML = '';
+    sq.classList.remove('numbered', 'start');
+  }
+  path.forEach((p, i) => {
+    const sq = sq4cEl(p.r, p.c);
+    sq.classList.add('numbered');
+    const txt = document.createElement('span');
+    txt.textContent = i + 1;
+    txt.style.cssText = 'font-size:1.1rem;color:#78350f;font-weight:900;pointer-events:none;';
+    sq.appendChild(txt);
+  });
+  if (path.length > 0) {
+    sq4cEl(path[0].r, path[0].c).classList.add('start');
+  }
+
+  // 타원 캔버스 초기화 (빈 타원 가이드만 그림)
+  drawRingEmpty();
+
+  step3Card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
+
+// ── 타원 고리 캔버스 ──────────────────────────────────────────────────────
+const LIGHT_COLOR = '#f0d9b5';
+const DARK_COLOR = '#b58863';
+
+function getRingParams() {
+  const w = ringCanvas.width;
+  const h = ringCanvas.height;
+  const cx = w / 2;
+  const cy = h / 2;
+  const rx = w / 2 - 36;
+  const ry = h / 2 - 36;
+  return { cx, cy, rx, ry };
+}
+
+// i번째 칸(0부터 시작)이 타원에서 차지할 각도 위치
+function ringAngle(i, total) {
+  // 12시 방향(-π/2)에서 시작, 시계 방향
+  return -Math.PI / 2 + (2 * Math.PI * i) / total;
+}
+
+function ringTargetPos(i, total) {
+  const { cx, cy, rx, ry } = getRingParams();
+  const a = ringAngle(i, total);
+  return { x: cx + rx * Math.cos(a), y: cy + ry * Math.sin(a) };
+}
+
+// 4×4 보드에서 (r,c) 칸의 절대 좌표 → 캔버스 상대 좌표로 변환
+// 원본 보드는 DOM이라 캔버스 밖에 있음. 애니메이션은 캔버스 안에서만 진행.
+// 따라서 "가상 시작 위치" = 캔버스 한 구석(왼쪽 상단 격자)에 4×4를 겹치듯 배치
+function gridStartPos(r, c) {
+  const w = ringCanvas.width;
+  const h = ringCanvas.height;
+  const cellSize = 42;
+  const gridW = cellSize * 4;
+  const gx = (w - gridW) / 2;
+  const gy = (h - gridW) / 2;
+  return {
+    x: gx + c * cellSize + cellSize / 2,
+    y: gy + r * cellSize + cellSize / 2,
+  };
+}
+
+function drawRingEmpty() {
+  const w = ringCanvas.width, h = ringCanvas.height;
+  ringCtx.clearRect(0, 0, w, h);
+  // 점선으로 타원 가이드
+  const { cx, cy, rx, ry } = getRingParams();
+  ringCtx.setLineDash([4, 6]);
+  ringCtx.strokeStyle = 'rgba(251,191,36,0.45)';
+  ringCtx.lineWidth = 2;
+  ringCtx.beginPath();
+  ringCtx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+  ringCtx.stroke();
+  ringCtx.setLineDash([]);
+  // 안내 텍스트
+  ringCtx.fillStyle = '#c9a22c';
+  ringCtx.font = "600 13px 'Noto Sans KR', sans-serif";
+  ringCtx.textAlign = 'center';
+  ringCtx.textBaseline = 'middle';
+  ringCtx.fillText('버튼을 눌러 펼쳐보세요', cx, cy);
+}
+
+// 한 칸(원/숫자)을 그림
+function drawCell(x, y, label, isLight, highlight) {
+  const r = 18;
+  ringCtx.beginPath();
+  ringCtx.arc(x, y, r, 0, Math.PI * 2);
+  ringCtx.fillStyle = isLight ? LIGHT_COLOR : DARK_COLOR;
+  ringCtx.fill();
+  ringCtx.strokeStyle = highlight ? '#dc2626' : '#7a4a1a';
+  ringCtx.lineWidth = highlight ? 3 : 1.8;
+  ringCtx.stroke();
+  ringCtx.fillStyle = isLight ? '#2c1a07' : '#fffbeb';
+  ringCtx.font = "900 13px 'Noto Sans KR', sans-serif";
+  ringCtx.textAlign = 'center';
+  ringCtx.textBaseline = 'middle';
+  ringCtx.fillText(label, x, y);
+}
+
+// 타원 경로를 따라 연결선 그리기 (현재까지 그려진 칸 사이)
+function drawRingConnections(progress) {
+  if (progress <= 0) return;
+  const total = path.length;
+  ringCtx.strokeStyle = 'rgba(217,119,6,0.55)';
+  ringCtx.lineWidth = 2;
+  ringCtx.lineCap = 'round';
+  ringCtx.beginPath();
+  for (let i = 0; i < total; i++) {
+    // 보간 위치
+    const p = path[i];
+    const startPos = gridStartPos(p.r, p.c);
+    const endPos = ringTargetPos(i, total);
+    const x = startPos.x + (endPos.x - startPos.x) * progress;
+    const y = startPos.y + (endPos.y - startPos.y) * progress;
+    if (i === 0) ringCtx.moveTo(x, y);
+    else ringCtx.lineTo(x, y);
+  }
+  // 순환 경로 완성 시 마지막에서 처음으로 닫기
+  if (progress >= 1) {
+    const first = ringTargetPos(0, total);
+    ringCtx.lineTo(first.x, first.y);
+  }
+  ringCtx.stroke();
+}
+
+// 애니메이션 프레임 (progress: 0→1)
+function drawFrame(progress) {
+  const w = ringCanvas.width, h = ringCanvas.height;
+  ringCtx.clearRect(0, 0, w, h);
+
+  // 타원 가이드 (연하게)
+  const { cx, cy, rx, ry } = getRingParams();
+  ringCtx.setLineDash([4, 6]);
+  ringCtx.strokeStyle = 'rgba(251,191,36,0.25)';
+  ringCtx.lineWidth = 1.5;
+  ringCtx.beginPath();
+  ringCtx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+  ringCtx.stroke();
+  ringCtx.setLineDash([]);
+
+  // 연결선
+  drawRingConnections(progress);
+
+  // 각 칸: 원본 위치 → 타원 위치로 선형 보간
+  const total = path.length;
+  path.forEach((p, i) => {
+    const startPos = gridStartPos(p.r, p.c);
+    const endPos = ringTargetPos(i, total);
+    const x = startPos.x + (endPos.x - startPos.x) * progress;
+    const y = startPos.y + (endPos.y - startPos.y) * progress;
+    const isLight = (p.r + p.c) % 2 === 0;
+    drawCell(x, y, String(i + 1), isLight, i === 0);
+  });
+}
+
+// 애니메이션 실행 (ease-in-out, grid ↔ ring 양방향)
+// direction: 'unfold' (grid → ring) / 'fold' (ring → grid)
+function unfoldAnimation(direction) {
+  const DURATION = 1200; // ms
+  const startTime = performance.now();
+  ringState = 'animating';
+  unfoldBtn.disabled = true;
+
+  function tick(now) {
+    const t = Math.min(1, (now - startTime) / DURATION);
+    const eased = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+    // 펼치기: 0→1, 접기: 1→0
+    const progress = direction === 'unfold' ? eased : 1 - eased;
+    drawFrame(progress);
+    if (t < 1) {
+      requestAnimationFrame(tick);
+    } else {
+      ringState = direction === 'unfold' ? 'ring' : 'grid';
+      unfoldBtn.disabled = false;
+      if (ringState === 'ring') {
+        unfoldBtn.textContent = '↺ 다시 접기';
+        statusLine3.className = 'status-line win';
+        statusLine3.textContent = '🎉 펼쳐졌어요! 색 패턴을 관찰하고, 원하면 다시 접어볼 수도 있어요';
+        if (!hasUnfoldedOnce) {
+          hasUnfoldedOnce = true;
+          obsBox.classList.add('visible');
+          toStep4Btn.classList.add('visible');
+        }
+      } else {
+        unfoldBtn.textContent = '고리로 펼치기';
+        statusLine3.className = 'status-line info';
+        statusLine3.textContent = '다시 격자 상태로 돌아왔어요. 언제든 다시 펼쳐볼 수 있어요';
+      }
+    }
+  }
+  requestAnimationFrame(tick);
+}
+
+unfoldBtn.addEventListener('click', () => {
+  if (ringState === 'animating') return;
+  if (ringState === 'grid') {
+    unfoldBtn.textContent = '펼치는 중...';
+    statusLine3.className = 'status-line info';
+    statusLine3.textContent = '원본 경로가 고리 모양으로 펼쳐집니다';
+    unfoldAnimation('unfold');
+  } else if (ringState === 'ring') {
+    unfoldBtn.textContent = '접는 중...';
+    statusLine3.className = 'status-line info';
+    statusLine3.textContent = '고리가 원본 격자로 돌아갑니다';
+    unfoldAnimation('fold');
+  }
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 4단계: 두 칸 제거 실험 (같은 색 → 다른 색 순차)
+// ═══════════════════════════════════════════════════════════════════════════
+
+const step4Card = document.getElementById('step4Card');
+const ringCanvas4 = document.getElementById('ringCanvas4');
+const ringCtx4 = ringCanvas4.getContext('2d');
+const statusLine4 = document.getElementById('statusLine4');
+const resetPhaseBtn = document.getElementById('resetPhaseBtn');
+const fillDominoBtn = document.getElementById('fillDominoBtn');
+const goPhaseBBtn = document.getElementById('goPhaseBBtn');
+const toStep5Btn = document.getElementById('toStep5Btn');
+const obsBox4 = document.getElementById('obsBox4');
+const obsText4 = document.getElementById('obsText4');
+const obsIcon4 = document.getElementById('obsIcon4');
+const phasePillA = document.getElementById('phasePillA');
+const phasePillB = document.getElementById('phasePillB');
+const step4Desc = document.getElementById('step4Desc');
+
+// 4단계 상태
+let phase4 = 'A';         // 'A' = 같은 색, 'B' = 다른 색
+let removedIndices = [];  // 고리에서 제거한 번호 (0~15)
+let phase4Filled = false;
+let phase4ACompleted = false;
+
+// 도미노 애니메이션용 상태
+let placedDominos = []; // { a, b, color }
+let leftoverCell = null;
+let fillAnimRunning = false;
+
+const ARC_COLORS = ['#3b82f6', '#8b5cf6']; // 파랑, 보라
+
+// 타원 파라미터 (4단계용 전용 헬퍼)
+function getRing4Params() {
+  const w = ringCanvas4.width;
+  const h = ringCanvas4.height;
+  return { cx: w / 2, cy: h / 2, rx: w / 2 - 38, ry: h / 2 - 38 };
+}
+function ring4Pos(i, total) {
+  const { cx, cy, rx, ry } = getRing4Params();
+  const a = -Math.PI / 2 + (2 * Math.PI * i) / total;
+  return { x: cx + rx * Math.cos(a), y: cy + ry * Math.sin(a) };
+}
+
+function cellIsLightByIndex(i) {
+  const p = path[i];
+  return (p.r + p.c) % 2 === 0;
+}
+
+// 제거된 인덱스를 기준으로 연속된 호 조각 계산 (2개의 arc)
+// 고리에서 두 칸을 빼면 두 호가 생김: arc1 = (r1+1..r2-1), arc2 = (r2+1..r1-1)
+function computeArcs() {
+  if (removedIndices.length !== 2) return [];
+  const total = path.length;
+  const sorted = [...removedIndices].sort((a, b) => a - b);
+  const [r1, r2] = sorted;
+  const arc1 = [];
+  for (let i = r1 + 1; i < r2; i++) arc1.push(i);
+  const arc2 = [];
+  for (let i = r2 + 1; i < total; i++) arc2.push(i);
+  for (let i = 0; i < r1; i++) arc2.push(i);
+  return [arc1, arc2];
+}
+
+// 호를 도미노 쌍으로 묶기 (2개씩 인접 매칭)
+function fillArcWithDominos(arc) {
+  const dominos = [];
+  let leftover = null;
+  for (let i = 0; i + 1 < arc.length; i += 2) {
+    dominos.push([arc[i], arc[i + 1]]);
+  }
+  if (arc.length % 2 === 1) {
+    leftover = arc[arc.length - 1];
+  }
+  return { dominos, leftover };
+}
+
+// 도미노 블록 그리기 — 두 칸(원)을 덮는 땅콩(capsule) 모양
+// 두 원의 중심을 잇는 축에 대해 수직으로 반지름만큼 벗어난 네 점 + 양 끝 반원
+function drawDominoOnRing(aIdx, bIdx, color) {
+  const total = path.length;
+  const pa = ring4Pos(aIdx, total);
+  const pb = ring4Pos(bIdx, total);
+  const R = 24; // capsule 반지름 (칸 원보다 살짝 큼)
+
+  // 방향 벡터 + 수직 벡터
+  const dx = pb.x - pa.x;
+  const dy = pb.y - pa.y;
+  const len = Math.hypot(dx, dy);
+  if (len < 0.01) return;
+  const ux = dx / len, uy = dy / len;   // 단위 방향
+  const px = -uy, py = ux;               // 수직 (90도 회전)
+
+  // 축 방향 각도 (양 끝 반원 그릴 때 사용)
+  const angle = Math.atan2(dy, dx);
+
+  // capsule path
+  ringCtx4.beginPath();
+  // 시작: a 중심 기준 +수직 방향 (outer top of a-side)
+  ringCtx4.moveTo(pa.x + px * R, pa.y + py * R);
+  // 직선: a 위쪽 → b 위쪽
+  ringCtx4.lineTo(pb.x + px * R, pb.y + py * R);
+  // b쪽 반원: (angle + π/2) → (angle - π/2) (시계 방향)
+  ringCtx4.arc(pb.x, pb.y, R, angle + Math.PI / 2, angle - Math.PI / 2, true);
+  // 직선: b 아래 → a 아래
+  ringCtx4.lineTo(pa.x - px * R, pa.y - py * R);
+  // a쪽 반원: (angle - π/2) → (angle + π/2) (시계 방향)
+  ringCtx4.arc(pa.x, pa.y, R, angle - Math.PI / 2, angle + Math.PI / 2, true);
+  ringCtx4.closePath();
+
+  // 채우기 (반투명)
+  ringCtx4.globalAlpha = 0.45;
+  ringCtx4.fillStyle = color;
+  ringCtx4.fill();
+  ringCtx4.globalAlpha = 1;
+
+  // 테두리
+  ringCtx4.strokeStyle = color;
+  ringCtx4.lineWidth = 2.5;
+  ringCtx4.stroke();
+}
+
+// 남은 칸에 빨간 X + 펄스 강조
+function drawLeftoverX(idx) {
+  const total = path.length;
+  const p = ring4Pos(idx, total);
+  // 빨간 원 배경 (펄스 효과 대신 연한 원)
+  ringCtx4.beginPath();
+  ringCtx4.arc(p.x, p.y, 28, 0, Math.PI * 2);
+  ringCtx4.fillStyle = 'rgba(220,38,38,0.25)';
+  ringCtx4.fill();
+  // 빨간 X
+  ringCtx4.strokeStyle = '#dc2626';
+  ringCtx4.lineWidth = 4;
+  ringCtx4.lineCap = 'round';
+  ringCtx4.beginPath();
+  ringCtx4.moveTo(p.x - 12, p.y - 12);
+  ringCtx4.lineTo(p.x + 12, p.y + 12);
+  ringCtx4.moveTo(p.x + 12, p.y - 12);
+  ringCtx4.lineTo(p.x - 12, p.y + 12);
+  ringCtx4.stroke();
+}
+
+// 4단계 고리 그리기
+function drawRing4() {
+  const w = ringCanvas4.width, h = ringCanvas4.height;
+  ringCtx4.clearRect(0, 0, w, h);
+
+  const { cx, cy, rx, ry } = getRing4Params();
+  // 가이드 타원 (연하게)
+  ringCtx4.setLineDash([3, 5]);
+  ringCtx4.strokeStyle = 'rgba(251,191,36,0.25)';
+  ringCtx4.lineWidth = 1.5;
+  ringCtx4.beginPath();
+  ringCtx4.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+  ringCtx4.stroke();
+  ringCtx4.setLineDash([]);
+
+  const total = path.length;
+
+  // 연결선 (제거 안 된 칸들 사이)
+  ringCtx4.strokeStyle = 'rgba(217,119,6,0.5)';
+  ringCtx4.lineWidth = 2;
+  ringCtx4.lineCap = 'round';
+  for (let i = 0; i < total; i++) {
+    const j = (i + 1) % total;
+    if (removedIndices.includes(i) || removedIndices.includes(j)) continue;
+    const a = ring4Pos(i, total);
+    const b = ring4Pos(j, total);
+    ringCtx4.beginPath();
+    ringCtx4.moveTo(a.x, a.y);
+    ringCtx4.lineTo(b.x, b.y);
+    ringCtx4.stroke();
+  }
+
+  // 도미노 채우기: placedDominos에 들어있는 것만 그림 (애니메이션용)
+  if (placedDominos.length > 0) {
+    placedDominos.forEach(d => drawDominoOnRing(d.a, d.b, d.color));
+  }
+  // 남겨진(leftover) 칸 강조
+  if (leftoverCell !== null) {
+    drawLeftoverX(leftoverCell);
+  }
+
+  // 각 칸 그리기
+  for (let i = 0; i < total; i++) {
+    const pos = ring4Pos(i, total);
+    const isLight = cellIsLightByIndex(i);
+    const isRemoved = removedIndices.includes(i);
+    const r = 20;
+    ringCtx4.beginPath();
+    ringCtx4.arc(pos.x, pos.y, r, 0, Math.PI * 2);
+    if (isRemoved) {
+      ringCtx4.fillStyle = 'rgba(0,0,0,0.05)';
+      ringCtx4.strokeStyle = '#9ca3af';
+      ringCtx4.setLineDash([3, 3]);
+      ringCtx4.lineWidth = 2;
+    } else {
+      ringCtx4.fillStyle = isLight ? LIGHT_COLOR : DARK_COLOR;
+      ringCtx4.strokeStyle = '#7a4a1a';
+      ringCtx4.setLineDash([]);
+      ringCtx4.lineWidth = 1.8;
+    }
+    ringCtx4.fill();
+    ringCtx4.stroke();
+    ringCtx4.setLineDash([]);
+
+    // 번호
+    if (isRemoved) {
+      ringCtx4.fillStyle = '#9ca3af';
+      ringCtx4.font = "700 13px 'Noto Sans KR', sans-serif";
+      ringCtx4.textAlign = 'center';
+      ringCtx4.textBaseline = 'middle';
+      ringCtx4.fillText('✕', pos.x, pos.y);
+    } else {
+      ringCtx4.fillStyle = isLight ? '#2c1a07' : '#fffbeb';
+      ringCtx4.font = "900 13px 'Noto Sans KR', sans-serif";
+      ringCtx4.textAlign = 'center';
+      ringCtx4.textBaseline = 'middle';
+      ringCtx4.fillText(String(i + 1), pos.x, pos.y);
+    }
+  }
+}
+
+// 클릭 좌표 → 가장 가까운 칸 인덱스 찾기
+function getCellAtClick(mx, my) {
+  const total = path.length;
+  for (let i = 0; i < total; i++) {
+    const pos = ring4Pos(i, total);
+    const dx = pos.x - mx, dy = pos.y - my;
+    if (dx * dx + dy * dy <= 22 * 22) return i;
+  }
+  return -1;
+}
+
+ringCanvas4.addEventListener('click', e => {
+  if (phase4Filled) return;
+  const rect = ringCanvas4.getBoundingClientRect();
+  const scaleX = ringCanvas4.width / rect.width;
+  const scaleY = ringCanvas4.height / rect.height;
+  const mx = (e.clientX - rect.left) * scaleX;
+  const my = (e.clientY - rect.top) * scaleY;
+  const idx = getCellAtClick(mx, my);
+  if (idx === -1) return;
+
+  // 이미 제거된 칸 다시 클릭 시 취소
+  const already = removedIndices.indexOf(idx);
+  if (already !== -1) {
+    removedIndices.splice(already, 1);
+    drawRing4();
+    updatePhase4Status();
+    return;
+  }
+
+  if (removedIndices.length >= 2) {
+    setStatus4('err', '두 칸이 이미 선택되었어요. 기존 선택을 취소하고 다시 선택하세요.');
+    return;
+  }
+
+  // 색깔 제약 체크
+  if (removedIndices.length === 1) {
+    const firstLight = cellIsLightByIndex(removedIndices[0]);
+    const thisLight = cellIsLightByIndex(idx);
+    if (phase4 === 'A' && firstLight !== thisLight) {
+      setStatus4('err', 'Part A에서는 같은 색 두 칸만 선택할 수 있어요');
+      return;
+    }
+    if (phase4 === 'B' && firstLight === thisLight) {
+      setStatus4('err', 'Part B에서는 서로 다른 색 두 칸을 선택하세요');
+      return;
+    }
+  }
+
+  removedIndices.push(idx);
+  drawRing4();
+  updatePhase4Status();
+});
+
+function updatePhase4Status() {
+  if (removedIndices.length === 0) {
+    const col = phase4 === 'A' ? '같은 색' : '서로 다른 색';
+    setStatus4('info', `${col} 두 칸을 클릭해서 제거해보세요`);
+    fillDominoBtn.disabled = true;
+  } else if (removedIndices.length === 1) {
+    setStatus4('info', '한 칸 선택됨 — 나머지 한 칸을 더 선택하세요');
+    fillDominoBtn.disabled = true;
+  } else {
+    setStatus4('ok', '두 칸 선택 완료! 이제 도미노로 채워볼까요?');
+    fillDominoBtn.disabled = false;
+  }
+}
+
+function setStatus4(cls, msg) {
+  statusLine4.className = 'status-line ' + cls;
+  statusLine4.textContent = msg;
+}
+
+// 도미노 채우기 애니메이션: 각 호를 순차로 돌며 2칸씩 묶어 도미노 놓기
+function runFillAnimation() {
+  fillAnimRunning = true;
+  placedDominos = [];
+  leftoverCell = null;
+  fillDominoBtn.disabled = true;
+
+  const arcs = computeArcs();
+  // 각 호마다 도미노 쌍 목록 준비
+  const allSteps = [];
+  arcs.forEach((arc, arcIdx) => {
+    const color = ARC_COLORS[arcIdx];
+    for (let i = 0; i + 1 < arc.length; i += 2) {
+      allSteps.push({ type: 'domino', a: arc[i], b: arc[i + 1], color });
+    }
+    if (arc.length % 2 === 1) {
+      allSteps.push({ type: 'leftover', idx: arc[arc.length - 1] });
+    }
+  });
+
+  let stepIdx = 0;
+  function nextStep() {
+    if (stepIdx >= allSteps.length) {
+      fillAnimRunning = false;
+      phase4Filled = true;
+      showPhaseResult();
+      return;
+    }
+    const s = allSteps[stepIdx++];
+    if (s.type === 'domino') {
+      placedDominos.push({ a: s.a, b: s.b, color: s.color });
+      setStatus4('info', `도미노 ${placedDominos.length}개 놓음 — 계속 채우는 중...`);
+    } else {
+      leftoverCell = s.idx;
+      setStatus4('err', `⚠️ ${s.idx + 1}번 칸이 짝 없이 혼자 남았어요!`);
+    }
+    drawRing4();
+    setTimeout(nextStep, 420);
+  }
+  nextStep();
+}
+
+function showPhaseResult() {
+  if (phase4 === 'A') {
+    // 같은 색 — 관찰 질문만 (결론 직접 제시 X)
+    obsBox4.classList.add('visible');
+    obsIcon4.textContent = '🔍';
+    obsText4.innerHTML = `
+      방금 일어난 일을 잘 관찰해 보세요.<br>
+      고리가 몇 조각으로 나뉘었나요? 각 조각에는 칸이 몇 개씩 있었나요?<br>
+      도미노가 마지막까지 잘 놓였는지 확인해보세요.
+    `;
+    obsBox4.style.borderLeftColor = '#6366f1';
+    obsBox4.style.background = 'linear-gradient(135deg, rgba(99,102,241,0.1), rgba(168,85,247,0.08))';
+    obsText4.style.color = '#3730a3';
+    setStatus4('info', '결과를 관찰해보세요');
+    goPhaseBBtn.style.display = 'inline-block';
+    phasePillA.classList.remove('active');
+    phasePillA.classList.add('done');
+  } else {
+    // 다른 색 — 관찰 질문 + 비교 유도 (결론 직접 제시 X)
+    obsBox4.classList.add('visible');
+    obsIcon4.textContent = '🔍';
+    obsText4.innerHTML = `
+      이번에도 잘 관찰해 보세요.<br>
+      두 조각의 칸 수가 어떻게 달라졌나요?<br>
+      <strong>A(같은 색)와 B(다른 색)의 결과는 어떤 점이 달랐나요?</strong>
+    `;
+    obsBox4.style.borderLeftColor = '#6366f1';
+    obsBox4.style.background = 'linear-gradient(135deg, rgba(99,102,241,0.1), rgba(168,85,247,0.08))';
+    obsText4.style.color = '#3730a3';
+    setStatus4('info', '두 실험의 결과를 비교해보세요');
+    phasePillB.classList.remove('active');
+    phasePillB.classList.add('done');
+    toStep5Btn.classList.add('visible');
+  }
+}
+
+fillDominoBtn.addEventListener('click', () => {
+  if (removedIndices.length !== 2 || fillAnimRunning) return;
+  runFillAnimation();
+});
+
+resetPhaseBtn.addEventListener('click', () => {
+  if (fillAnimRunning) return;
+  removedIndices = [];
+  placedDominos = [];
+  leftoverCell = null;
+  phase4Filled = false;
+  fillDominoBtn.disabled = true;
+  drawRing4();
+  updatePhase4Status();
+});
+
+goPhaseBBtn.addEventListener('click', () => {
+  // Part B로 전환
+  phase4 = 'B';
+  phase4Filled = false;
+  removedIndices = [];
+  placedDominos = [];
+  leftoverCell = null;
+  phase4ACompleted = true;
+  phasePillB.classList.add('active');
+  goPhaseBBtn.style.display = 'none';
+  obsBox4.classList.remove('visible');
+  obsBox4.style.borderLeftColor = '';
+  obsBox4.style.background = '';
+  obsText4.style.color = '';
+  step4Desc.innerHTML = '이번엔 <strong>서로 다른 색</strong> 두 칸을 빼보고, 결과가 어떻게 달라지는지 확인해봅시다.';
+  drawRing4();
+  updatePhase4Status();
+});
+
+// 3단계 → 4단계 진입
+toStep4Btn.addEventListener('click', () => {
+  step4Card.classList.remove('locked');
+  removedIndices = [];
+  placedDominos = [];
+  leftoverCell = null;
+  phase4 = 'A';
+  phase4Filled = false;
+  drawRing4();
+  updatePhase4Status();
+  step4Card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 5단계: 발견한 것 정리
+// ═══════════════════════════════════════════════════════════════════════════
+
+const step5Card = document.getElementById('step5Card');
+const toStep6Btn = document.getElementById('toStep6Btn');
+
+toStep5Btn.addEventListener('click', () => {
+  step5Card.classList.remove('locked');
+  // 5단계는 읽기 단계이므로 진입 즉시 다음 단계 버튼 표시
+  toStep6Btn.classList.add('visible');
+  step5Card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
+
+// ── 공통: "다음 단계로" 버튼 한 번 클릭 후 회색 비활성화 ─────────────────
+// 캡처 단계에서 가로채어 used 클래스 부여 → 이후 pointer-events: none으로 비활성
+document.querySelectorAll('.next-step-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    // 살짝 지연해서 기존 핸들러가 먼저 실행되도록 함
+    setTimeout(() => btn.classList.add('used'), 0);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 6단계: 8×8 일반화
+// ═══════════════════════════════════════════════════════════════════════════
+
+const step6Card = document.getElementById('step6Card');
+const big8Canvas = document.getElementById('big8Canvas');
+const big8Ctx = big8Canvas.getContext('2d');
+const drawBig8Btn = document.getElementById('drawBig8Btn');
+const statusLine6 = document.getElementById('statusLine6');
+const finalBox = document.getElementById('finalBox');
+
+// 8×8 순환 경로 (정답 예시): 모든 64칸을 지나 출발점 복귀
+const BIG_CYCLE = [
+  [0,0],[0,1],[0,2],[0,3],[0,4],[0,5],[0,6],[0,7],
+  [1,7],[1,6],[1,5],[1,4],[1,3],[1,2],[1,1],[2,1],
+  [2,2],[2,3],[2,4],[2,5],[2,6],[2,7],[3,7],[3,6],
+  [3,5],[3,4],[3,3],[3,2],[3,1],[4,1],[4,2],[4,3],
+  [4,4],[4,5],[4,6],[4,7],[5,7],[5,6],[5,5],[5,4],
+  [5,3],[5,2],[5,1],[6,1],[6,2],[6,3],[6,4],[6,5],
+  [6,6],[6,7],[7,7],[7,6],[7,5],[7,4],[7,3],[7,2],
+  [7,1],[7,0],[6,0],[5,0],[4,0],[3,0],[2,0],[1,0],
+];
+
+const BIG_N = 8;
+function drawBig8Board() {
+  const w = big8Canvas.width, h = big8Canvas.height;
+  const sz = w / BIG_N;
+  big8Ctx.clearRect(0, 0, w, h);
+  for (let r = 0; r < BIG_N; r++) for (let c = 0; c < BIG_N; c++) {
+    big8Ctx.fillStyle = (r + c) % 2 === 0 ? LIGHT_COLOR : DARK_COLOR;
+    big8Ctx.fillRect(c * sz, r * sz, sz, sz);
+  }
+  big8Ctx.strokeStyle = '#7a4a1a';
+  big8Ctx.lineWidth = 4;
+  big8Ctx.strokeRect(0, 0, w, h);
+}
+
+function big8CellCenter(r, c) {
+  const sz = big8Canvas.width / BIG_N;
+  return { x: c * sz + sz / 2, y: r * sz + sz / 2 };
+}
+
+let big8Drawn = false;
+let big8Animating = false;
+
+function animateBig8Path() {
+  if (big8Animating || big8Drawn) return;
+  big8Animating = true;
+  drawBig8Btn.disabled = true;
+  drawBig8Btn.textContent = '그리는 중...';
+  drawBig8Board();
+
+  const total = BIG_CYCLE.length;
+  let step = 0;
+  const PATH_COLOR = 'rgba(34,197,94,0.8)';
+  const DOT_COLOR = '#d97706';
+
+  function tick() {
+    if (step >= total) {
+      // 마지막에 순환 닫기
+      const first = big8CellCenter(...BIG_CYCLE[0]);
+      const last = big8CellCenter(...BIG_CYCLE[total - 1]);
+      big8Ctx.beginPath();
+      big8Ctx.strokeStyle = PATH_COLOR;
+      big8Ctx.lineWidth = 4;
+      big8Ctx.lineCap = 'round';
+      big8Ctx.moveTo(last.x, last.y);
+      big8Ctx.lineTo(first.x, first.y);
+      big8Ctx.stroke();
+      big8Animating = false;
+      big8Drawn = true;
+      drawBig8Btn.textContent = '✓ 완료';
+      statusLine6.className = 'status-line win';
+      statusLine6.textContent = '🎉 8×8에도 모든 칸을 지나 돌아오는 경로가 있어요!';
+      finalBox.classList.add('visible');
+      return;
+    }
+    // 이전 → 현재 선 그리기
+    if (step > 0) {
+      const prev = big8CellCenter(...BIG_CYCLE[step - 1]);
+      const curr = big8CellCenter(...BIG_CYCLE[step]);
+      big8Ctx.beginPath();
+      big8Ctx.strokeStyle = PATH_COLOR;
+      big8Ctx.lineWidth = 4;
+      big8Ctx.lineCap = 'round';
+      big8Ctx.moveTo(prev.x, prev.y);
+      big8Ctx.lineTo(curr.x, curr.y);
+      big8Ctx.stroke();
+    }
+    // 현재 칸에 점
+    const c = big8CellCenter(...BIG_CYCLE[step]);
+    big8Ctx.beginPath();
+    big8Ctx.arc(c.x, c.y, 4, 0, Math.PI * 2);
+    big8Ctx.fillStyle = DOT_COLOR;
+    big8Ctx.fill();
+    step++;
+    setTimeout(tick, 45);
+  }
+  tick();
+}
+
+drawBig8Btn.addEventListener('click', animateBig8Path);
+
+toStep6Btn.addEventListener('click', () => {
+  step6Card.classList.remove('locked');
+  drawBig8Board();
+  step6Card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
+
+// ── 🔧 Developer test shortcut (선생님 전용) ─────────────────────────────
+// Shift+F: 1~6단계 모두 완료 상태로 점프 (테스트용)
+// e.code 사용 → 한글 IME와 무관, 입력 필드에선 무시
+document.addEventListener('keydown', e => {
+  if (!e.shiftKey || e.metaKey || e.ctrlKey || e.altKey) return;
+  const tag = (e.target && e.target.tagName) || '';
+  if (/INPUT|TEXTAREA|SELECT/.test(tag)) return;
+  if (e.code !== 'KeyF') return;
+
+  e.preventDefault();
+  console.log('[dev] Shift+F: jumping to final state');
+
+  // 1) 4×4 기본 경로 (예: U자형 해밀턴 순환 — 16칸 전부 지나 출발 복귀)
+  //    (0,0)→(0,1)→(0,2)→(0,3)→(1,3)→(1,2)→(1,1)→(1,0)
+  //    →(2,0)→(2,1)→(2,2)→(2,3)→(3,3)→(3,2)→(3,1)→(3,0)→(0,0)
+  const preset = [
+    {r:0,c:0},{r:0,c:1},{r:0,c:2},{r:0,c:3},
+    {r:1,c:3},{r:1,c:2},{r:1,c:1},{r:1,c:0},
+    {r:2,c:0},{r:2,c:1},{r:2,c:2},{r:2,c:3},
+    {r:3,c:3},{r:3,c:2},{r:3,c:1},{r:3,c:0},
+  ];
+  // 위 경로의 마지막 칸 (3,0)과 첫 칸 (0,0)은 인접하지 않으므로 다른 경로 필요
+  // → 확실히 인접한 순환 경로로 교체:
+  //   (0,0)→(1,0)→(2,0)→(3,0)→(3,1)→(2,1)→(1,1)→(0,1)
+  //   →(0,2)→(1,2)→(2,2)→(3,2)→(3,3)→(2,3)→(1,3)→(0,3)→(0,0) ... 도 인접 X
+  // 올바른 해밀턴 순환: 뱀형(serpentine)이 경계에서 복귀 가능한 경로
+  //   (0,0)(0,1)(0,2)(0,3)(1,3)(1,2)(1,1)(1,0)(2,0)(2,1)(2,2)(2,3)(3,3)(3,2)(3,1)(3,0)
+  //   → (3,0)와 (0,0) 비인접. 아래로 가는 대신 가장자리 순환 구조 사용:
+  //   (0,0)(1,0)(2,0)(3,0)(3,1)(3,2)(3,3)(2,3)(2,2)(2,1)(1,1)(1,2)(1,3)(0,3)(0,2)(0,1) → (0,0) 인접 ✓
+  const presetFixed = [
+    {r:0,c:0},{r:1,c:0},{r:2,c:0},{r:3,c:0},
+    {r:3,c:1},{r:3,c:2},{r:3,c:3},{r:2,c:3},
+    {r:2,c:2},{r:2,c:1},{r:1,c:1},{r:1,c:2},
+    {r:1,c:3},{r:0,c:3},{r:0,c:2},{r:0,c:1},
+  ];
+
+  // 현재 상태 초기화
+  resetMission();
+
+  // 1단계: path 배열 주입
+  path = presetFixed.slice();
+  completed = true;
+  board4El.style.pointerEvents = 'none';
+  renderPath();
+  sq4El(path[0].r, path[0].c).classList.add('start');
+  setStatus('win', '🎉 완성! (테스트 모드)');
+  toStep2Btn.classList.add('visible');
+
+  // 2단계: 언락 + 번호 넣기 완료 상태로
+  step2Unlocked = true;
+  step2Card.classList.remove('locked');
+  numberBtn.disabled = true;
+  numberBtn.textContent = '✓ 번호 매김 완료';
+  numberingDone = true;
+  for (let r2 = 0; r2 < N; r2++) for (let c2 = 0; c2 < N; c2++) {
+    const sq = sq4bEl(r2, c2);
+    sq.classList.remove('numbered', 'last', 'start');
+    sq.innerHTML = '';
+  }
+  path.forEach((p, i) => {
+    const sq = sq4bEl(p.r, p.c);
+    sq.classList.add('numbered');
+    const txt = document.createElement('span');
+    txt.textContent = i + 1;
+    txt.style.cssText = 'position:relative;z-index:2;pointer-events:none;';
+    sq.appendChild(txt);
+  });
+  if (path.length > 0) sq4bEl(path[0].r, path[0].c).classList.add('start');
+  statusLine2.className = 'status-line win';
+  statusLine2.textContent = '🎉 순서대로 1번부터 16번까지 매겨졌어요!';
+  toStep3Btn.classList.add('visible');
+
+  // 3단계: 언락 + 원본 판에 번호 복사 + 고리 펼친 상태
+  step3Unlocked = true;
+  step3Card.classList.remove('locked');
+  for (let r3 = 0; r3 < N; r3++) for (let c3 = 0; c3 < N; c3++) {
+    const sq = sq4cEl(r3, c3);
+    sq.innerHTML = '';
+    sq.classList.remove('numbered', 'start');
+  }
+  path.forEach((p, i) => {
+    const sq = sq4cEl(p.r, p.c);
+    sq.classList.add('numbered');
+    const txt = document.createElement('span');
+    txt.textContent = i + 1;
+    txt.style.cssText = 'font-size:1.1rem;color:#78350f;font-weight:900;pointer-events:none;';
+    sq.appendChild(txt);
+  });
+  if (path.length > 0) sq4cEl(path[0].r, path[0].c).classList.add('start');
+  ringState = 'ring';
+  hasUnfoldedOnce = true;
+  drawFrame(1);  // 고리 완전 펼친 상태
+  unfoldBtn.textContent = '↺ 다시 접기';
+  statusLine3.className = 'status-line win';
+  statusLine3.textContent = '🎉 펼쳐졌어요! (테스트 모드)';
+  obsBox.classList.add('visible');
+  toStep4Btn.classList.add('visible');
+
+  // 4단계: 언락 + Phase B 완료 상태 (다른 색 제거 성공)
+  step4Card.classList.remove('locked');
+  phase4 = 'B';
+  phase4ACompleted = true;
+  phase4Filled = true;
+  phasePillA.classList.remove('active');
+  phasePillA.classList.add('done');
+  phasePillB.classList.remove('active');
+  phasePillB.classList.add('done');
+  // 다른 색 제거 시뮬레이션: 0번과 1번 제거 (인접하므로 다른 색)
+  removedIndices = [0, 1];
+  placedDominos = [];
+  leftoverCell = null;
+  const arcs = computeArcs();
+  arcs.forEach((arc, arcIdx) => {
+    const color = ARC_COLORS[arcIdx];
+    for (let i = 0; i + 1 < arc.length; i += 2) {
+      placedDominos.push({ a: arc[i], b: arc[i + 1], color });
+    }
+  });
+  drawRing4();
+  fillDominoBtn.disabled = true;
+  obsBox4.classList.add('visible');
+  obsIcon4.textContent = '🔍';
+  obsText4.innerHTML = '이번에도 잘 관찰해 보세요.<br>두 조각의 칸 수가 어떻게 달라졌나요?';
+  obsBox4.style.borderLeftColor = '#6366f1';
+  obsBox4.style.background = 'linear-gradient(135deg, rgba(99,102,241,0.1), rgba(168,85,247,0.08))';
+  obsText4.style.color = '#3730a3';
+  setStatus4('info', '두 실험의 결과를 비교해보세요');
+  goPhaseBBtn.style.display = 'none';
+  toStep5Btn.classList.add('visible');
+
+  // 5단계: 언락
+  step5Card.classList.remove('locked');
+  toStep6Btn.classList.add('visible');
+
+  // 6단계: 언락 + 8x8 경로 완성 상태
+  step6Card.classList.remove('locked');
+  drawBig8Board();
+  // 경로를 한번에 전부 그리기 (애니메이션 없이)
+  const total8 = BIG_CYCLE.length;
+  for (let i = 1; i < total8; i++) {
+    const prev8 = big8CellCenter(...BIG_CYCLE[i - 1]);
+    const curr8 = big8CellCenter(...BIG_CYCLE[i]);
+    big8Ctx.beginPath();
+    big8Ctx.strokeStyle = 'rgba(34,197,94,0.8)';
+    big8Ctx.lineWidth = 4;
+    big8Ctx.lineCap = 'round';
+    big8Ctx.moveTo(prev8.x, prev8.y);
+    big8Ctx.lineTo(curr8.x, curr8.y);
+    big8Ctx.stroke();
+  }
+  for (let i = 0; i < total8; i++) {
+    const c8 = big8CellCenter(...BIG_CYCLE[i]);
+    big8Ctx.beginPath();
+    big8Ctx.arc(c8.x, c8.y, 4, 0, Math.PI * 2);
+    big8Ctx.fillStyle = '#d97706';
+    big8Ctx.fill();
+  }
+  const firstBig = big8CellCenter(...BIG_CYCLE[0]);
+  const lastBig = big8CellCenter(...BIG_CYCLE[total8 - 1]);
+  big8Ctx.beginPath();
+  big8Ctx.strokeStyle = 'rgba(34,197,94,0.8)';
+  big8Ctx.lineWidth = 4;
+  big8Ctx.lineCap = 'round';
+  big8Ctx.moveTo(lastBig.x, lastBig.y);
+  big8Ctx.lineTo(firstBig.x, firstBig.y);
+  big8Ctx.stroke();
+  big8Drawn = true;
+  big8Animating = false;
+  drawBig8Btn.textContent = '✓ 완료';
+  drawBig8Btn.disabled = true;
+  statusLine6.className = 'status-line win';
+  statusLine6.textContent = '🎉 테스트 모드 — 전체 단계 완료';
+  finalBox.classList.add('visible');
+
+  // 모든 "다음 단계로" 버튼은 이미 용도 끝 → used 처리
+  document.querySelectorAll('.next-step-btn').forEach(b => b.classList.add('used'));
+
+  // 6단계로 스크롤
+  step6Card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+});
+
+// ── PDF 저장 버튼 (브라우저 인쇄 → PDF로 저장) ───────────────────────────
+const pdfBtn = document.getElementById('pdfBtn');
+
+// 인쇄 직전: 학생이 쓴 textarea 값을 "복제 div"로 대체
+// (textarea는 기본 인쇄 시 값이 안 보이는 브라우저가 있어서)
+// beforeprint/afterprint 이벤트로 자동 처리되므로 Ctrl+P도 동일하게 지원됨
+let printSwaps = [];
+function swapTextareasBeforePrint() {
+  printSwaps = [];
+  document.querySelectorAll('textarea.reflect-area').forEach(ta => {
+    const div = document.createElement('div');
+    div.className = 'reflect-area-print ' + (ta.classList.contains('big') ? 'big' : '');
+    div.textContent = ta.value || '';
+    ta.style.display = 'none';
+    ta.parentNode.insertBefore(div, ta.nextSibling);
+    printSwaps.push({ textarea: ta, div });
+  });
+}
+function restoreTextareasAfterPrint() {
+  printSwaps.forEach(({ textarea, div }) => {
+    textarea.style.display = '';
+    div.remove();
+  });
+  printSwaps = [];
+}
+
+// 브라우저 인쇄 생애주기 이벤트 이용
+window.addEventListener('beforeprint', swapTextareasBeforePrint);
+window.addEventListener('afterprint', restoreTextareasAfterPrint);
+
+pdfBtn.addEventListener('click', () => {
+  // 브라우저 인쇄 대화상자 → "PDF로 저장" 선택
+  window.print();
+});
+
+buildBoard4c();
+drawRingEmpty();
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 초기화
+// ═══════════════════════════════════════════════════════════════════════════
+buildBoard4();
+buildBoard4b();
+resetMission();
+</script>
+</body>
+</html>

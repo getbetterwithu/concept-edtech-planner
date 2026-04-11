@@ -1,0 +1,1000 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>훼손된 체스판 도미노 도전</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    /* ── Body & background ── */
+    body {
+      min-height: 100vh;
+      font-family: 'Noto Sans KR', sans-serif;
+      color: #2c1a07;
+      display: flex; flex-direction: column; align-items: center;
+      padding: 36px 16px 56px;
+      user-select: none;
+      background-color: #1c0e02;
+      background-image:
+        radial-gradient(ellipse at 20% 0%, rgba(120,65,15,0.55) 0%, transparent 55%),
+        radial-gradient(ellipse at 80% 100%, rgba(100,50,10,0.45) 0%, transparent 55%),
+        repeating-conic-gradient(rgba(255,200,100,0.035) 0% 25%, transparent 0% 50%);
+      background-size: auto, auto, 52px 52px;
+    }
+
+    /* ── Header ── */
+    .app-header { text-align: center; margin-bottom: 28px; }
+    .app-title {
+      font-size: 2.1rem; font-weight: 900;
+      color: #f5e0b0; letter-spacing: -0.5px; margin-bottom: 6px;
+      text-shadow: 0 2px 12px rgba(0,0,0,0.5);
+    }
+    .app-sub { font-size: 1rem; color: rgba(245,220,160,0.65); font-weight: 500; }
+
+    /* ── Mode tabs ── */
+    .mode-tabs {
+      display: flex; gap: 5px;
+      background: rgba(255,255,255,0.08);
+      backdrop-filter: blur(8px);
+      padding: 5px; border-radius: 18px;
+      border: 1px solid rgba(255,200,100,0.15);
+      margin-bottom: 24px;
+    }
+    .mode-tab {
+      padding: 10px 22px; border-radius: 14px; border: none;
+      cursor: pointer; font-family: 'Noto Sans KR', sans-serif;
+      font-size: 0.92rem; font-weight: 700;
+      color: rgba(245,220,160,0.65);
+      background: transparent; transition: all 0.2s; white-space: nowrap;
+    }
+    .mode-tab.active {
+      background: linear-gradient(135deg, #c9a22c, #e8c050);
+      color: #2c1a07;
+      box-shadow: 0 4px 14px rgba(201,162,44,0.45);
+    }
+    .mode-tab:hover:not(.active) { background: rgba(255,200,100,0.12); color: #f5e0b0; }
+
+    /* ── Game card ── */
+    .game-card {
+      background: linear-gradient(160deg, #fdf8ef 0%, #f7f0e0 100%);
+      border-radius: 24px;
+      box-shadow: 0 12px 48px rgba(0,0,0,0.45), 0 2px 8px rgba(0,0,0,0.2);
+      border: 1px solid rgba(201,162,44,0.25);
+      padding: 28px 28px 32px;
+      display: flex; flex-direction: column; align-items: center; gap: 20px;
+      width: 100%; max-width: 620px;
+    }
+
+    /* ── Mode description ── */
+    .mode-desc {
+      font-size: 0.93rem; color: #6b4c24; font-weight: 500;
+      text-align: center; line-height: 1.75;
+      background: rgba(201,162,44,0.1); border-radius: 12px;
+      padding: 12px 18px; width: 100%;
+      border-left: 4px solid #c9a22c;
+    }
+
+    /* ── Controls ── */
+    .controls {
+      display: flex; align-items: center; gap: 10px;
+      flex-wrap: wrap; justify-content: center;
+    }
+    .counter-badge {
+      background: white; border-radius: 12px;
+      padding: 9px 20px; font-size: 1rem; font-weight: 600; color: #2c1a07;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      border: 1.5px solid rgba(201,162,44,0.3);
+    }
+    .counter-badge span { color: #c9a22c; font-size: 1.3rem; font-weight: 900; }
+
+    .btn {
+      background: white; border: 2px solid #ddd; border-radius: 12px;
+      padding: 9px 18px; font-family: 'Noto Sans KR', sans-serif;
+      font-size: 0.92rem; font-weight: 700; color: #6b4c24;
+      cursor: pointer; transition: all 0.15s;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.07);
+    }
+    .btn:hover:not(:disabled) { border-color: #c9a22c; color: #9a6f10; background: #fdf6e0; }
+    .btn:disabled { opacity: 0.35; cursor: default; }
+    .btn.primary {
+      background: linear-gradient(135deg, #c9a22c, #e0b830);
+      border-color: #c9a22c; color: #2c1a07;
+      box-shadow: 0 4px 14px rgba(201,162,44,0.4);
+    }
+    .btn.primary:hover:not(:disabled) { background: linear-gradient(135deg, #b8921c, #d0a820); }
+
+    /* ── Setup info (mode 3) ── */
+    .setup-info {
+      width: 100%; background: rgba(201,162,44,0.08);
+      border-radius: 14px; padding: 14px 18px;
+      border: 1.5px solid rgba(201,162,44,0.25);
+      display: none;
+    }
+    .setup-info h3 { font-size: 0.95rem; font-weight: 700; color: #8b6010; margin-bottom: 10px; }
+    .sel-info { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .cell-chip {
+      display: flex; align-items: center; gap: 6px;
+      padding: 6px 12px; border-radius: 20px;
+      font-size: 0.85rem; font-weight: 600;
+      border: 2px solid #e5d4b0; background: white;
+      color: #4a3010;
+    }
+    .color-dot {
+      width: 13px; height: 13px; border-radius: 50%;
+      border: 1.5px solid #c8b090; flex-shrink: 0;
+    }
+    .color-dot.l { background: #f0d9b5; }
+    .color-dot.d { background: #b58863; }
+    .same-badge { font-weight: 700; color: #dc2626; font-size: 0.9rem; }
+    .diff-badge { font-weight: 700; color: #16a34a; font-size: 0.9rem; }
+
+    /* ── Board ── */
+    .board-wrap { position: relative; }
+    .board {
+      display: grid;
+      grid-template-columns: repeat(8, var(--sq));
+      grid-template-rows: repeat(8, var(--sq));
+      border-radius: 6px; overflow: hidden;
+      box-shadow:
+        0 0 0 4px #7a4a1a,
+        0 0 0 7px #5a3010,
+        0 8px 32px rgba(0,0,0,0.5);
+      cursor: crosshair;
+    }
+
+    /* ── Squares ── */
+    .sq { width: var(--sq); height: var(--sq); position: relative; }
+
+    .sq.light {
+      background:
+        linear-gradient(135deg, rgba(255,255,255,0.18) 0%, transparent 60%, rgba(0,0,0,0.06) 100%),
+        #f0d9b5;
+    }
+    .sq.dark {
+      background:
+        linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 60%, rgba(0,0,0,0.12) 100%),
+        #b58863;
+    }
+
+    .sq.gone {
+      cursor: default;
+      display: flex; align-items: center; justify-content: center;
+      font-size: calc(var(--sq) * 0.4); font-weight: 900;
+      color: rgba(140, 30, 30, 0.8);
+    }
+    .sq.sel::after {
+      content: ''; position: absolute; inset: 3px;
+      border: 3px solid #16a34a; border-radius: 3px; pointer-events: none;
+    }
+    .sq.setup-hi {
+      outline: 3px solid rgba(201,162,44,0.85);
+      outline-offset: -3px;
+      background:
+        linear-gradient(135deg, rgba(255,255,255,0.18) 0%, transparent 60%, rgba(0,0,0,0.06) 100%),
+        #d4c48a !important;
+    }
+    .sq.dark.setup-hi {
+      background:
+        linear-gradient(135deg, rgba(255,255,255,0.1) 0%, transparent 60%, rgba(0,0,0,0.12) 100%),
+        #c8a050 !important;
+    }
+    .sq.setup-sel {
+      cursor: default;
+      display: flex; align-items: center; justify-content: center;
+      font-size: calc(var(--sq) * 0.4); font-weight: 900;
+      color: rgba(140, 30, 30, 0.8);
+    }
+    .sq.setup-sel::before { content: '✕'; }
+    .sq.setup-sel::after { display: none !important; }
+    /* Edge-hint: dashed gold outline for clickable edge cells in mode 2 */
+    .sq.edge-hint, .sq.corner-hint { cursor: pointer !important; }
+    .sq.edge-hint::after, .sq.corner-hint::after {
+      content: ''; position: absolute; inset: 3px;
+      border: 2px dashed rgba(201,162,44,0.6);
+      border-radius: 2px; pointer-events: none;
+      animation: edgePulse 2s ease-in-out infinite;
+    }
+    .sq.setup-sel.edge-hint::after, .sq.setup-hi.edge-hint::after,
+    .sq.setup-sel.corner-hint::after, .sq.setup-hi.corner-hint::after { display: none; }
+    @keyframes edgePulse {
+      0%, 100% { opacity: 0.4; }
+      50% { opacity: 1; }
+    }
+
+    /* ── Overlay ── */
+    .overlay { position: absolute; inset: 0; pointer-events: none; }
+
+    /* ── Domino ── */
+    .domino {
+      position: absolute; border-radius: 7px; overflow: hidden;
+      pointer-events: all; cursor: pointer; display: flex;
+      z-index: 10; border: 2.5px solid #1a0f02;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.35);
+      transition: box-shadow 0.12s, transform 0.1s;
+    }
+    .domino:hover {
+      box-shadow: 0 7px 24px rgba(0,0,0,0.45);
+      transform: translateY(-2px);
+      z-index: 50 !important;
+    }
+    .domino.v-dom { flex-direction: column; }
+    .half { flex: 1; display: flex; align-items: center; justify-content: center; }
+    .half.wh { background: #f5f5f0; }
+    .half.bk { background: #1a1a1a; }
+    .domino.h-dom .half:first-child { border-right: 2px solid #1a0f02; }
+    .domino.v-dom .half:first-child { border-bottom: 2px solid #1a0f02; }
+
+    /* ── Action buttons ── */
+    .d-acts {
+      position: absolute; inset: 0; opacity: 0;
+      transition: opacity 0.18s; pointer-events: none;
+    }
+    .domino:hover .d-acts,
+    .domino.tapped .d-acts { opacity: 1; pointer-events: all; }
+
+    .d-btn {
+      position: absolute; width: calc(var(--sq) * 0.45); height: calc(var(--sq) * 0.45);
+      border-radius: 50%; border: none;
+      display: flex; align-items: center; justify-content: center;
+      font-size: calc(var(--sq) * 0.22); cursor: pointer;
+      transition: transform 0.15s, box-shadow 0.15s;
+      z-index: 60; line-height: 1;
+    }
+    .d-btn:hover { transform: scale(1.3) !important; }
+
+    /* 뒤집기 — 가운데, 파스텔 민트 */
+    .flip-btn {
+      top: 50%; left: 50%; transform: translate(-50%, -50%);
+      background: #d4f5e9; color: #1a6b4a;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.25);
+    }
+    .flip-btn:hover { transform: translate(-50%, -50%) scale(1.3) !important; }
+
+    /* 회전 — 우상단(세로) / 좌상단(가로), 파스텔 스카이 */
+    .rot-btn {
+      top: 3px; right: 3px;
+      background: #dbeafe; color: #1e40af;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.25);
+    }
+    /* 가로 도미노: 회전을 좌상단으로 → 삭제(우하단)와 대각선 분산 */
+    .domino.h-dom .rot-btn { right: auto; left: 3px; }
+
+    /* 삭제 — 우하단, 파스텔 코랄 */
+    .del-btn {
+      bottom: 3px; right: 3px;
+      background: #fee2e2; color: #b91c1c;
+      font-size: 13px;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.25);
+    }
+
+    /* ── Ghost ── */
+    .ghost {
+      position: absolute; border-radius: 7px; pointer-events: none; z-index: 5;
+      border: 2.5px dashed #16a34a; background: rgba(22,163,74,0.15);
+    }
+    .ghost.bad { border-color: #dc2626; background: rgba(220,38,38,0.15); }
+
+    /* ── Status ── */
+    .status {
+      font-size: 1rem; font-weight: 600; min-height: 30px;
+      text-align: center; color: #a07840;
+    }
+    .status.ok   { color: #16a34a; }
+    .status.win  { color: #c9a22c; font-size: 1.15rem; }
+    .status.err  { color: #dc2626; }
+    .status.info { color: #8b6010; }
+
+    /* ── Footer ── */
+    footer {
+      margin-top: 36px; font-size: 1rem;
+      color: rgba(255,255,255,0.75); text-align: center; font-weight: 500;
+    }
+  </style>
+</head>
+<body>
+
+<header class="app-header">
+  <h1 class="app-title">훼손된 체스판 도미노 도전</h1>
+  <p class="app-sub">두 칸이 제거된 체스판 — 도미노로 채워보세요!</p>
+</header>
+
+<div class="mode-tabs">
+  <button class="mode-tab active" data-mode="1">① 대각선 제거</button>
+  <button class="mode-tab" data-mode="2">② 한 줄 끝 제거</button>
+  <button class="mode-tab" data-mode="3">③ 내가 선택</button>
+</div>
+
+<div class="game-card">
+  <p class="mode-desc" id="modeDesc"></p>
+
+  <!-- Mode 3 setup info -->
+  <div class="setup-info" id="setupInfo">
+    <h3>선택한 칸</h3>
+    <div id="setupContent"></div>
+  </div>
+
+  <!-- Controls -->
+  <div class="controls" id="controls">
+    <div class="counter-badge">남은 도미노 <span id="ctr">31</span> / 31</div>
+    <button class="btn primary" id="startBtn" style="display:none">게임 시작 →</button>
+    <button class="btn" id="undoBtn" disabled>↩ 실행 취소</button>
+    <button class="btn" id="resetBtn">↺ 초기화</button>
+  </div>
+
+  <!-- Board -->
+  <div class="board-wrap">
+    <div class="board" id="board"></div>
+    <div class="overlay" id="overlay"></div>
+  </div>
+
+  <div class="status" id="status"></div>
+</div>
+
+<footer>서울사대부중 2학년 수학B 허철호 선생님 &copy; All rights reserved</footer>
+
+<script>
+// ── Constants ──────────────────────────────────────────────────────────────
+const N = 8;
+let SZ = 64;
+
+function calcSZ() {
+  // 게임카드 패딩(28px*2) + 보드 테두리(7px*2) + 여유
+  const maxBoard = Math.min(
+    window.innerWidth - 56 - 14,
+    window.innerHeight * 0.7
+  );
+  SZ = Math.floor(Math.max(maxBoard, 240) / 8);
+  SZ = Math.min(SZ, 64); // 데스크탑 최대 64px
+  document.documentElement.style.setProperty('--sq', SZ + 'px');
+}
+calcSZ();
+window.addEventListener('resize', () => { calcSZ(); redraw(); });
+const k = (r, c) => `${r},${c}`;
+
+// ── State (per-mode, isolated) ────────────────────────────────────────────
+// 각 모드(1/2/3)가 자기만의 상태를 따로 보관한다.
+// 탭 전환 시 현재 모드의 전역 변수들을 modeStates에 저장하고,
+// 새 모드의 상태를 전역으로 로드한다 (save/load 패턴).
+function makeModeState() {
+  return {
+    occ: emptyOcc(),
+    doms: {},
+    nextId: 1,
+    hist: [],
+    removedCells: new Set(),
+    phase: 'setup',
+    setupData: null,
+  };
+}
+const modeStates = { 1: makeModeState(), 2: makeModeState(), 3: makeModeState() };
+modeStates[3].setupData = [];  // 모드3은 배열로 시작
+
+// 현재 활성 모드의 상태를 담는 전역 변수들 (modeStates[gameMode]와 동기화됨)
+let removedCells = modeStates[1].removedCells;
+let occ          = modeStates[1].occ;
+let doms         = modeStates[1].doms;
+let nextId       = modeStates[1].nextId;
+let hist         = modeStates[1].hist;
+
+// ── UI state ──────────────────────────────────────────────────────────────
+let gameMode  = 1;
+let phase     = modeStates[1].phase;
+let setupData = modeStates[1].setupData;   // mode2: {r,c} | mode3: [{r,c},...]
+
+// sel/drag/ghost은 순간적인 조작 상태이므로 모드 전환 시 항상 리셋 (공유 안 함)
+let sel = null;
+let drag = null;
+let ghost = null;
+
+// ── DOM ───────────────────────────────────────────────────────────────────
+const boardEl      = document.getElementById('board');
+const overlayEl    = document.getElementById('overlay');
+const ctrEl        = document.getElementById('ctr');
+const statusEl     = document.getElementById('status');
+const undoBtn      = document.getElementById('undoBtn');
+const resetBtn     = document.getElementById('resetBtn');
+const startBtn     = document.getElementById('startBtn');
+const setupInfo    = document.getElementById('setupInfo');
+const setupContent = document.getElementById('setupContent');
+const modeDescEl   = document.getElementById('modeDesc');
+
+// ── Helpers ───────────────────────────────────────────────────────────────
+function emptyOcc() { return Array.from({length: N}, () => Array(N).fill(null)); }
+function inBounds(r, c) { return r >= 0 && r < N && c >= 0 && c < N; }
+function canPlace(r1, c1, r2, c2) {
+  return inBounds(r1,c1) && inBounds(r2,c2)
+    && !removedCells.has(k(r1,c1)) && !removedCells.has(k(r2,c2))
+    && occ[r1][c1] === null && occ[r2][c2] === null
+    && Math.abs(r1-r2) + Math.abs(c1-c2) === 1;
+}
+function sqEl(r, c) { return boardEl.children[r * N + c]; }
+function isLight(r, c) { return (r + c) % 2 === 0; }
+function colLabel(c) { return 'ABCDEFGH'[c]; }
+function cellName(r, c) { return `${colLabel(c)}${8 - r}`; }
+
+function isCorner(r, c) { return (r===0||r===7) && (c===0||c===7); }
+function isEdgeCell(r, c) { return r===0||r===7||c===0||c===7; }
+
+// For mode 2: useCol=true → 같은 열 위아래, useCol=false → 같은 행 좌우
+function getOppositeForSetup2(r, c, useCol) {
+  return useCol ? [r===0?7:0, c] : [r, c===0?7:0];
+}
+// Default direction for an edge cell (non-corner: unambiguous; corner: col default)
+function defaultUseCol(r, c) { return r===0||r===7; }
+
+// ── History ───────────────────────────────────────────────────────────────
+function snap() {
+  hist.push({ occ: occ.map(row => [...row]), doms: JSON.parse(JSON.stringify(doms)), nextId });
+  if (hist.length > 120) hist.shift();
+}
+function undo() {
+  if (!hist.length) return;
+  const s = hist.pop();
+  occ = s.occ; doms = s.doms; nextId = s.nextId;
+  redraw(); setStatus('실행 취소되었습니다.');
+}
+
+// ── Domino logic ──────────────────────────────────────────────────────────
+function place(r1, c1, r2, c2) {
+  if (!canPlace(r1,c1,r2,c2)) return false;
+  snap();
+  const id = nextId++;
+  doms[id] = { id, r1, c1, r2, c2, flipped: false };
+  occ[r1][c1] = occ[r2][c2] = id;
+  redraw(); return true;
+}
+function removeDom(id) {
+  const d = doms[id]; if (!d) return;
+  snap();
+  occ[d.r1][d.c1] = occ[d.r2][d.c2] = null;
+  delete doms[id];
+  redraw(); setStatus('도미노를 제거했습니다.');
+}
+function flipDom(id) { snap(); doms[id].flipped ^= true; redraw(); }
+
+function rotOptions(d) {
+  const isH = d.r1 === d.r2;
+  const anchors = [[d.r1, d.c1], [d.r2, d.c2]];
+  const dirs = isH ? [[-1,0],[1,0]] : [[0,-1],[0,1]];
+  const opts = [];
+  for (const [ar, ac] of anchors) for (const [dr, dc] of dirs) {
+    const nr = ar+dr, nc = ac+dc;
+    if (!inBounds(nr,nc) || removedCells.has(k(nr,nc))) continue;
+    const v = occ[nr][nc];
+    if (v !== null && v !== d.id) continue;
+    opts.push([ar, ac, nr, nc]);
+  }
+  return opts.filter(([a,b,c2,d2]) =>
+    !((a===d.r1&&b===d.c1&&c2===d.r2&&d2===d.c2)||(a===d.r2&&b===d.c2&&c2===d.r1&&d2===d.c1))
+  );
+}
+function rotateDom(id) {
+  const d = doms[id]; const opts = rotOptions(d); if (!opts.length) return;
+  snap();
+  occ[d.r1][d.c1] = occ[d.r2][d.c2] = null;
+  [d.r1, d.c1, d.r2, d.c2] = opts[0];
+  occ[d.r1][d.c1] = occ[d.r2][d.c2] = id;
+  redraw();
+}
+
+// ── Ghost ─────────────────────────────────────────────────────────────────
+function showGhost(r1, c1, r2, c2) {
+  clearGhost();
+  const valid = canPlace(r1,c1,r2,c2);
+  const isH = r1 === r2;
+  const minR = Math.min(r1,r2), minC = Math.min(c1,c2);
+  ghost = document.createElement('div');
+  ghost.className = 'ghost' + (valid ? '' : ' bad');
+  ghost.style.cssText = `left:${minC*SZ+2}px;top:${minR*SZ+2}px;`
+    + `width:${isH?SZ*2-4:SZ-4}px;height:${isH?SZ-4:SZ*2-4}px;`;
+  overlayEl.appendChild(ghost);
+}
+function clearGhost() { if (ghost) { ghost.remove(); ghost = null; } }
+
+// ── Rendering ─────────────────────────────────────────────────────────────
+function mkBtn(text, cls, title, handler) {
+  const b = document.createElement('button');
+  b.className = cls; b.title = title; b.textContent = text;
+  b.addEventListener('mousedown', e => e.stopPropagation());
+  b.addEventListener('click', handler);
+  return b;
+}
+function makeDomEl(d) {
+  const isH = d.r1 === d.r2;
+  const minR = Math.min(d.r1,d.r2), minC = Math.min(d.c1,d.c2);
+  const el = document.createElement('div');
+  el.id = `d${d.id}`;
+  el.className = `domino ${isH ? 'h-dom' : 'v-dom'}`;
+  el.style.cssText = `left:${minC*SZ+2}px;top:${minR*SZ+2}px;`
+    + `width:${isH?SZ*2-4:SZ-4}px;height:${isH?SZ-4:SZ*2-4}px;z-index:${10+d.id};`;
+  const h1 = document.createElement('div');
+  const h2 = document.createElement('div');
+  h1.className = 'half ' + (d.flipped ? 'bk' : 'wh');
+  h2.className = 'half ' + (d.flipped ? 'wh' : 'bk');
+  el.append(h1, h2);
+  const acts = document.createElement('div'); acts.className = 'd-acts';
+  acts.appendChild(mkBtn('⇆', 'd-btn flip-btn', '뒤집기', e => { e.stopPropagation(); flipDom(d.id); }));
+  if (rotOptions(d).length > 0)
+    acts.appendChild(mkBtn('↻', 'd-btn rot-btn', '90° 회전', e => { e.stopPropagation(); rotateDom(d.id); }));
+  acts.appendChild(mkBtn('✕', 'd-btn del-btn', '제거', e => { e.stopPropagation(); removeDom(d.id); }));
+  el.appendChild(acts);
+
+  // 모바일: 탭으로 액션버튼 토글
+  el.addEventListener('touchstart', e => {
+    // 액션버튼 자체를 누른 경우엔 토글 불필요
+    if (e.target.closest('.d-btn')) return;
+    e.stopPropagation();
+    const already = el.classList.contains('tapped');
+    // 다른 도미노의 tapped 해제
+    document.querySelectorAll('.domino.tapped').forEach(d => d.classList.remove('tapped'));
+    if (!already) el.classList.add('tapped');
+  }, { passive: true });
+
+  return el;
+}
+
+function redraw() {
+  // 매 렌더링마다 현재 모드 슬롯과 전역 변수를 동기화
+  // (재할당/변이가 어디서 일어나든 최종적으로 modeStates에 반영되도록 보장)
+  if (typeof saveCurrentModeState === 'function' && modeStates[gameMode]) {
+    saveCurrentModeState();
+  }
+
+  overlayEl.innerHTML = '';
+  if (phase === 'playing') Object.values(doms).forEach(d => overlayEl.appendChild(makeDomEl(d)));
+
+  for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
+    const sq = sqEl(r, c);
+    if (removedCells.has(k(r,c))) {
+      sq.classList.add('gone'); sq.textContent = '✕';
+    } else {
+      sq.classList.remove('gone'); sq.textContent = '';
+    }
+    // Setup hints
+    sq.classList.remove('edge-hint', 'corner-hint');
+    if (phase === 'setup' && !removedCells.has(k(r,c))) {
+      if (gameMode === 2) sq.classList.toggle('edge-hint', isEdgeCell(r,c));
+      if (gameMode === 1) sq.classList.toggle('corner-hint', isCorner(r,c));
+    }
+  }
+
+  const placed = Object.keys(doms).length;
+  ctrEl.textContent = 31 - placed;
+  undoBtn.disabled = hist.length === 0;
+
+  if (phase === 'playing') {
+    if (placed === 31) setStatus('축하드립니다! 31개를 모두 놓았습니다.<br><span style="color:#f59e0b;font-weight:700;">당신이 선택한 블록의 종류와 성공여부에는 어떤 관계가 있나요?</span>', 'win');
+    else if (placed > 0) setStatus(`${placed}개 배치됨 — 남은 도미노: ${31 - placed}개`, 'ok');
+    else setStatus('빈 칸을 클릭하거나 드래그해서 도미노를 놓아보세요.');
+  }
+}
+
+// ── Board init ────────────────────────────────────────────────────────────
+function buildBoard() {
+  boardEl.innerHTML = '';
+  for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
+    const sq = document.createElement('div');
+    sq.className = 'sq ' + ((r+c)%2===0 ? 'light' : 'dark');
+    sq.dataset.r = r; sq.dataset.c = c;
+    boardEl.appendChild(sq);
+  }
+}
+
+// ── Click mode (playing) ──────────────────────────────────────────────────
+function handleCellClick(r, c) {
+  if (phase !== 'playing') return;
+  if (!inBounds(r,c) || removedCells.has(k(r,c)) || occ[r][c] !== null) {
+    if (sel) { sqEl(sel.r, sel.c).classList.remove('sel'); sel = null; clearGhost(); }
+    return;
+  }
+  if (!sel) {
+    sel = {r, c}; sqEl(r, c).classList.add('sel');
+    setStatus('인접한 다른 칸을 클릭하세요.', 'info');
+  } else {
+    const {r: r1, c: c1} = sel;
+    sqEl(r1, c1).classList.remove('sel'); sel = null; clearGhost();
+    if (r === r1 && c === c1) { setStatus('선택 취소.'); return; }
+    if (!place(r1, c1, r, c)) setStatus('인접한 빈 칸에만 놓을 수 있습니다.', 'err');
+  }
+}
+
+// ── Mode 1: diagonal corner setup ────────────────────────────────────────
+function applySetup1Sel(r, c) {
+  for (let rr = 0; rr < N; rr++) for (let cc = 0; cc < N; cc++)
+    sqEl(rr, cc).classList.remove('setup-sel', 'setup-hi');
+  const or = r===0?7:0, oc = c===0?7:0;
+  sqEl(r,c).classList.add('setup-sel');
+  sqEl(or,oc).classList.add('setup-sel');
+  setupData = {r, c};
+  startBtn.style.display = 'inline-flex';
+  const dir = (r===0&&c===0)||(r===7&&c===7) ? '↘ (\\방향)' : '↙ (/방향)';
+  setStatus(`${dir} 대각선 선택 — 게임 시작을 누르세요`, 'info');
+}
+function handleSetup1Click(r, c) {
+  if (!isCorner(r,c)) return;
+  applySetup1Sel(r, c);
+}
+function handleSetup1Hover(r, c) {
+  for (let rr = 0; rr < N; rr++) for (let cc = 0; cc < N; cc++)
+    sqEl(rr,cc).classList.remove('setup-hi');
+  if (!isCorner(r,c)) return;
+  const or = r===0?7:0, oc = c===0?7:0;
+  if (!sqEl(r,c).classList.contains('setup-sel')) sqEl(r,c).classList.add('setup-hi');
+  if (!sqEl(or,oc).classList.contains('setup-sel')) sqEl(or,oc).classList.add('setup-hi');
+}
+
+// ── Mode 2: edge cell setup ───────────────────────────────────────────────
+function applySetup2Sel(r, c, useCol) {
+  for (let rr = 0; rr < N; rr++) for (let cc = 0; cc < N; cc++)
+    sqEl(rr, cc).classList.remove('setup-sel', 'setup-hi');
+  const [or, oc] = getOppositeForSetup2(r, c, useCol);
+  sqEl(r, c).classList.add('setup-sel');
+  sqEl(or, oc).classList.add('setup-sel');
+  setupData = {r, c, useCol};
+  startBtn.style.display = 'inline-flex';
+  const dir = useCol ? '세로줄' : '가로줄';
+  const hint = isCorner(r,c) ? ' (다시 클릭하면 방향 전환)' : '';
+  setStatus(`${cellName(r,c)} + ${cellName(or,oc)} ${dir} 선택${hint} — 게임 시작을 누르세요`, 'info');
+}
+function handleSetup2Click(r, c) {
+  if (!isEdgeCell(r,c)) return;
+  // Corner: re-clicking same cell toggles direction
+  if (isCorner(r,c) && setupData && setupData.r===r && setupData.c===c) {
+    applySetup2Sel(r, c, !setupData.useCol);
+  } else {
+    applySetup2Sel(r, c, defaultUseCol(r,c));
+  }
+}
+function handleSetup2Hover(r, c) {
+  for (let rr = 0; rr < N; rr++) for (let cc = 0; cc < N; cc++)
+    sqEl(rr, cc).classList.remove('setup-hi');
+  if (!isEdgeCell(r,c)) return;
+  const useCol = defaultUseCol(r,c);
+  const [or, oc] = getOppositeForSetup2(r, c, useCol);
+  if (!sqEl(r,c).classList.contains('setup-sel')) sqEl(r,c).classList.add('setup-hi');
+  if (!sqEl(or,oc).classList.contains('setup-sel')) sqEl(or,oc).classList.add('setup-hi');
+}
+
+// ── Mode 3: custom cell setup ─────────────────────────────────────────────
+function handleSetup3Click(r, c) {
+  if (removedCells.has(k(r,c))) return;
+  const idx = setupData.findIndex(s => s.r === r && s.c === c);
+  if (idx !== -1) {
+    setupData.splice(idx, 1);
+    sqEl(r, c).classList.remove('setup-sel');
+  } else {
+    if (setupData.length >= 2) return;
+    setupData.push({r, c});
+    sqEl(r, c).classList.add('setup-sel');
+  }
+  updateSetup3UI();
+}
+function updateSetup3UI() {
+  const n = setupData.length;
+  if (n === 0) {
+    setupInfo.style.display = 'none';
+    startBtn.style.display = 'none';
+    setStatus('제거할 첫 번째 칸을 클릭하세요.', 'info');
+    return;
+  }
+  setupInfo.style.display = 'block';
+  let html = '<div class="sel-info">';
+  setupData.forEach(s => {
+    const light = isLight(s.r, s.c);
+    html += `<div class="cell-chip">${cellName(s.r,s.c)}</div>`;
+  });
+  if (n === 2) {
+    html += `<span style="font-size:0.85rem;color:#a07840;font-weight:600">→ 게임 시작을 눌러보세요</span>`;
+  }
+  html += '</div>';
+  setupContent.innerHTML = html;
+  if (n === 1) {
+    startBtn.style.display = 'none';
+    setStatus('제거할 두 번째 칸을 클릭하세요.', 'info');
+  } else {
+    startBtn.style.display = 'inline-flex';
+    const same = isLight(setupData[0].r, setupData[0].c) === isLight(setupData[1].r, setupData[1].c);
+    setStatus('두 칸 선택 완료 — 게임 시작을 눌러 도미노를 놓아보세요!', 'info');
+  }
+}
+
+// ── Start game ────────────────────────────────────────────────────────────
+function startGame() {
+  if (gameMode === 1 && setupData) {
+    const or = setupData.r===0?7:0, oc = setupData.c===0?7:0;
+    removedCells = new Set([k(setupData.r, setupData.c), k(or, oc)]);
+  } else if (gameMode === 2 && setupData) {
+    const [or, oc] = getOppositeForSetup2(setupData.r, setupData.c, setupData.useCol);
+    removedCells = new Set([k(setupData.r, setupData.c), k(or, oc)]);
+  } else if (gameMode === 3) {
+    removedCells = new Set(setupData.map(s => k(s.r, s.c)));
+  }
+  phase = 'playing';
+  startBtn.style.display = 'none';
+  setupInfo.style.display = 'none';
+  undoBtn.disabled = true;
+  for (let r = 0; r < N; r++) for (let c = 0; c < N; c++)
+    sqEl(r, c).classList.remove('setup-hi', 'setup-sel', 'edge-hint', 'corner-hint');
+  redraw();
+  setStatus('도미노를 놓아보세요!');
+}
+
+// ── Drag & mouse events ───────────────────────────────────────────────────
+boardEl.addEventListener('mousedown', e => {
+  if (e.button !== 0) return;
+  const sq = e.target.closest('.sq');
+  if (!sq || sq.classList.contains('gone')) return;
+  const r = +sq.dataset.r, c = +sq.dataset.c;
+
+  if (phase === 'setup' && gameMode === 1) { handleSetup1Click(r, c); return; }
+  if (phase === 'setup' && gameMode === 2) { handleSetup2Click(r, c); return; }
+  if (phase === 'setup' && gameMode === 3) { handleSetup3Click(r, c); return; }
+  if (phase !== 'playing') return;
+  if (occ[r][c] !== null) return;
+  drag = {r, c, sx: e.clientX, sy: e.clientY, moved: false};
+  e.preventDefault();
+});
+
+boardEl.addEventListener('mousemove', e => {
+  if (phase !== 'setup') return;
+  const sq = e.target.closest('.sq');
+  const clearHi = () => { for (let r=0;r<N;r++) for (let c=0;c<N;c++) sqEl(r,c).classList.remove('setup-hi'); };
+  if (!sq || sq.classList.contains('gone')) { clearHi(); return; }
+  const r = +sq.dataset.r, c = +sq.dataset.c;
+  if (gameMode === 1) handleSetup1Hover(r, c);
+  else if (gameMode === 2) handleSetup2Hover(r, c);
+});
+boardEl.addEventListener('mouseleave', () => {
+  if (phase === 'setup')
+    for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) sqEl(r,c).classList.remove('setup-hi');
+});
+
+document.addEventListener('mousemove', e => {
+  if (!drag) {
+    if (sel && phase === 'playing') {
+      const sq = document.elementFromPoint(e.clientX, e.clientY)?.closest('.sq');
+      if (sq && !sq.classList.contains('gone')) {
+        const r = +sq.dataset.r, c = +sq.dataset.c;
+        if (!(r === sel.r && c === sel.c)) { showGhost(sel.r, sel.c, r, c); return; }
+      }
+      clearGhost();
+    }
+    return;
+  }
+  const dx = e.clientX - drag.sx, dy = e.clientY - drag.sy;
+  if (!drag.moved && Math.abs(dx) + Math.abs(dy) > 6) {
+    drag.moved = true;
+    if (sel) { sqEl(sel.r, sel.c).classList.remove('sel'); sel = null; }
+  }
+  if (!drag.moved) return;
+  const sq = document.elementFromPoint(e.clientX, e.clientY)?.closest('.sq');
+  if (!sq || sq.classList.contains('gone')) { clearGhost(); return; }
+  const r = +sq.dataset.r, c = +sq.dataset.c;
+  if (r === drag.r && c === drag.c) { clearGhost(); return; }
+  showGhost(drag.r, drag.c, r, c);
+});
+
+document.addEventListener('mouseup', e => {
+  if (!drag) return;
+  clearGhost();
+  const sq = document.elementFromPoint(e.clientX, e.clientY)?.closest('.sq');
+  if (!drag.moved) { handleCellClick(drag.r, drag.c); }
+  else if (sq && !sq.classList.contains('gone')) {
+    const r = +sq.dataset.r, c = +sq.dataset.c;
+    if (!(r === drag.r && c === drag.c))
+      if (!place(drag.r, drag.c, r, c)) setStatus('인접한 빈 칸에만 놓을 수 있습니다.', 'err');
+  }
+  drag = null;
+});
+
+document.addEventListener('click', e => {
+  if (!sel) return;
+  if (!e.target.closest('.board-wrap')) {
+    sqEl(sel.r, sel.c).classList.remove('sel'); sel = null; clearGhost();
+    setStatus('선택 취소.');
+  }
+});
+
+// ── Touch events ──────────────────────────────────────────────────────────
+function sqFromPoint(x, y) {
+  const el = document.elementFromPoint(x, y);
+  return el?.closest('.sq') || null;
+}
+
+boardEl.addEventListener('touchstart', e => {
+  if (e.touches.length !== 1) return;
+  const t = e.touches[0];
+  // 도미노 액션버튼 외부 탭 시 tapped 해제
+  if (!e.target.closest('.domino')) {
+    document.querySelectorAll('.domino.tapped').forEach(d => d.classList.remove('tapped'));
+  }
+  const sq = sqFromPoint(t.clientX, t.clientY);
+  if (!sq || sq.classList.contains('gone')) return;
+  const r = +sq.dataset.r, c = +sq.dataset.c;
+
+  if (phase === 'setup' && gameMode === 1) { handleSetup1Click(r, c); e.preventDefault(); return; }
+  if (phase === 'setup' && gameMode === 2) { handleSetup2Click(r, c); e.preventDefault(); return; }
+  if (phase === 'setup' && gameMode === 3) { handleSetup3Click(r, c); e.preventDefault(); return; }
+  if (phase !== 'playing') return;
+  if (occ[r][c] !== null) return;
+  drag = {r, c, sx: t.clientX, sy: t.clientY, moved: false};
+  e.preventDefault();
+}, { passive: false });
+
+boardEl.addEventListener('touchmove', e => {
+  if (!drag || e.touches.length !== 1) return;
+  const t = e.touches[0];
+  const dx = t.clientX - drag.sx, dy = t.clientY - drag.sy;
+  if (!drag.moved && Math.abs(dx) + Math.abs(dy) > 8) {
+    drag.moved = true;
+    if (sel) { sqEl(sel.r, sel.c).classList.remove('sel'); sel = null; }
+  }
+  if (!drag.moved) return;
+  const sq = sqFromPoint(t.clientX, t.clientY);
+  if (!sq || sq.classList.contains('gone')) { clearGhost(); return; }
+  const r = +sq.dataset.r, c = +sq.dataset.c;
+  if (r === drag.r && c === drag.c) { clearGhost(); return; }
+  showGhost(drag.r, drag.c, r, c);
+  e.preventDefault();
+}, { passive: false });
+
+boardEl.addEventListener('touchend', e => {
+  if (!drag) return;
+  clearGhost();
+  const t = e.changedTouches[0];
+  const sq = sqFromPoint(t.clientX, t.clientY);
+  if (!drag.moved) {
+    handleCellClick(drag.r, drag.c);
+  } else if (sq && !sq.classList.contains('gone')) {
+    const r = +sq.dataset.r, c = +sq.dataset.c;
+    if (!(r === drag.r && c === drag.c))
+      if (!place(drag.r, drag.c, r, c)) setStatus('인접한 빈 칸에만 놓을 수 있습니다.', 'err');
+  }
+  drag = null;
+  e.preventDefault();
+}, { passive: false });
+
+// ── Mode management ───────────────────────────────────────────────────────
+const MODE_DESCS = {
+  1: '네 코너 칸 중 하나를 클릭하면 대각선 반대쪽 코너 칸이 함께 제거됩니다.\n도미노 31개로 나머지 62칸을 모두 덮을 수 있을까요?',
+  2: '가장자리 칸을 하나 클릭하면 같은 행/열 반대쪽 끝 칸이 함께 제거됩니다.\n62칸을 도미노로 모두 덮을 수 있을까요?',
+  3: '제거할 두 칸을 직접 골라보세요.\n어떤 두 칸을 선택하느냐에 따라 결과가 달라질 수 있습니다!'
+};
+
+function clearAllSetup() {
+  for (let r = 0; r < N; r++) for (let c = 0; c < N; c++)
+    sqEl(r, c).classList.remove('setup-hi', 'setup-sel', 'edge-hint', 'corner-hint', 'sel', 'gone');
+  for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) sqEl(r,c).textContent = '';
+}
+
+// 현재 전역 상태를 modeStates[gameMode] 슬롯에 저장 (참조만 맞춰줌)
+function saveCurrentModeState() {
+  const st = modeStates[gameMode];
+  st.occ          = occ;
+  st.doms         = doms;
+  st.nextId       = nextId;
+  st.hist         = hist;
+  st.removedCells = removedCells;
+  st.phase        = phase;
+  st.setupData    = setupData;
+}
+
+// modeStates[mode] 슬롯을 전역 변수로 로드
+function loadModeState(mode) {
+  const st = modeStates[mode];
+  occ          = st.occ;
+  doms         = st.doms;
+  nextId       = st.nextId;
+  hist         = st.hist;
+  removedCells = st.removedCells;
+  phase        = st.phase;
+  setupData    = st.setupData;
+}
+
+// 현재 모드 슬롯을 "빈 판 + 셋업" 초기 상태로 만들고 전역에도 반영
+function initModeStateForMode(mode) {
+  const st = modeStates[mode];
+  st.occ          = emptyOcc();
+  st.doms         = {};
+  st.nextId       = 1;
+  st.hist         = [];
+  st.removedCells = new Set();
+  st.phase        = 'setup';
+  st.setupData    = (mode === 3) ? [] : null;
+  if (mode === gameMode) loadModeState(mode);
+}
+
+// 모드별 초기 안내 메시지
+function statusMsgForSetup(mode) {
+  if (mode === 1) return '네 코너 칸 중 하나를 클릭해 대각선 방향을 선택하세요.';
+  if (mode === 2) return '점선으로 표시된 가장자리 칸을 클릭하면 반대쪽 끝이 자동 선택됩니다.';
+  return '제거할 첫 번째 칸을 클릭하세요.';
+}
+
+// 현재 모드만 리셋 (다른 모드 불간섭)
+function resetGame() {
+  // 순간적 조작 상태는 모드 불문 항상 리셋
+  drag = null; sel = null; clearGhost(); clearAllSetup();
+  startBtn.style.display = 'none';
+  setupInfo.style.display = 'none';
+  undoBtn.disabled = true;
+
+  modeDescEl.textContent = MODE_DESCS[gameMode];
+
+  // 현재 모드 슬롯을 초기 상태로 되돌림
+  initModeStateForMode(gameMode);
+
+  redraw();
+  setStatus(statusMsgForSetup(gameMode), 'info');
+}
+
+// 모드 전환: 현재 모드 상태 저장 → 새 모드 상태 로드 → 화면 갱신 (리셋 없음)
+function setMode(mode) {
+  if (mode === gameMode) return;
+
+  // 1. 현재 모드 상태를 슬롯에 백업
+  saveCurrentModeState();
+
+  // 2. 순간 UI 상태(선택/드래그/고스트/셋업 힌트 클래스) 정리
+  drag = null; sel = null; clearGhost(); clearAllSetup();
+
+  // 3. 탭 UI 갱신 + 모드 변경
+  gameMode = mode;
+  document.querySelectorAll('.mode-tab').forEach(t => t.classList.toggle('active', +t.dataset.mode === mode));
+
+  // 4. 새 모드의 저장된 상태 로드
+  loadModeState(mode);
+
+  // 5. 해당 모드의 설명/버튼 상태 갱신
+  modeDescEl.textContent = MODE_DESCS[gameMode];
+  setupInfo.style.display = 'none';
+
+  // 6. 로드한 phase에 맞춰 startBtn 표시 여부 결정
+  if (phase === 'setup') {
+    // 이미 셋업 중이었다면 setupData 유무에 따라 startBtn을 복원
+    const hasSetup =
+      (gameMode === 1 && setupData) ||
+      (gameMode === 2 && setupData) ||
+      (gameMode === 3 && setupData && setupData.length === 2);
+    startBtn.style.display = hasSetup ? 'inline-flex' : 'none';
+  } else {
+    startBtn.style.display = 'none';
+  }
+
+  // 7. 판 다시 그리기
+  redraw();
+
+  // 8. 상태 메시지 — 진행 중이면 현재 상황 요약, 처음이면 셋업 안내
+  if (phase === 'playing') {
+    const placed = Object.keys(doms).length;
+    if (placed === 0) setStatus('빈 칸을 클릭하거나 드래그해서 도미노를 놓아보세요.');
+    else if (placed === 31) setStatus('축하드립니다! 31개를 모두 놓았습니다.', 'win');
+    else setStatus(`${placed}개 배치됨 — 남은 도미노: ${31 - placed}개`, 'ok');
+  } else {
+    setStatus(statusMsgForSetup(gameMode), 'info');
+  }
+}
+
+function setStatus(msg, cls = '') {
+  statusEl.innerHTML = msg;
+  statusEl.className = 'status ' + cls;
+}
+
+// ── Buttons ───────────────────────────────────────────────────────────────
+startBtn.addEventListener('click', startGame);
+undoBtn.addEventListener('click', undo);
+resetBtn.addEventListener('click', resetGame);
+document.querySelectorAll('.mode-tab').forEach(t => {
+  t.addEventListener('click', () => setMode(+t.dataset.mode));
+});
+
+// ── Init ─────────────────────────────────────────────────────────────────
+buildBoard();
+// 탭 UI에 active 표시 + 첫 모드(1)를 셋업 단계로 초기화
+document.querySelectorAll('.mode-tab').forEach(t => t.classList.toggle('active', +t.dataset.mode === 1));
+resetGame();
+</script>
+</body>
+</html>

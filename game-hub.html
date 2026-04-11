@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="robots" content="noindex, nofollow">
-  <title>게임 모음</title>
+  <title>AI-Labs · 수학 탐구 놀이터</title>
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;900&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -14,55 +14,110 @@
       background: #f8fafc;
       color: #1e293b;
       min-height: 100vh;
-      padding: 40px 20px 60px;
+      padding: 56px 20px 60px;
     }
 
-    .back-link {
-      display: inline-flex; align-items: center; gap: 6px;
-      font-size: 0.9rem; font-weight: 600; color: #64748b;
-      text-decoration: none; margin-bottom: 32px;
-      transition: color 0.15s;
+    .container {
+      max-width: 760px;
+      margin: 0 auto;
     }
-    .back-link:hover { color: #2563eb; }
 
-    .page-header { margin-bottom: 40px; }
+    /* ── Page header ── */
+    .page-header {
+      text-align: center;
+      margin-bottom: 48px;
+    }
     .page-header h1 {
-      font-size: 1.9rem; font-weight: 900; color: #1e293b;
-      letter-spacing: -0.5px; margin-bottom: 8px;
+      font-size: 2.4rem;
+      font-weight: 900;
+      letter-spacing: -1px;
+      margin-bottom: 10px;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
     }
-    .page-header p { font-size: 0.95rem; color: #64748b; font-weight: 500; }
+    .page-header h1 .emoji {
+      font-size: 1.9rem;
+      line-height: 1;
+      /* 컬러 이모지 원본 색상 유지 — 그라디언트 영향 안 받음 */
+    }
+    .page-header h1 .brand {
+      background: linear-gradient(135deg, #1e293b 0%, #2563eb 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .page-header .tagline {
+      font-size: 1rem;
+      color: #64748b;
+      font-weight: 500;
+    }
 
-    /* ── Game collection ── */
-    .game-collection { display: flex; flex-direction: column; gap: 32px; max-width: 720px; }
+    /* ── Lab collection ── */
+    .lab-collection {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
 
-    .game-group {
-      background: white; border-radius: 16px;
-      box-shadow: 0 2px 16px rgba(0,0,0,0.07);
+    .lab-group {
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 4px 24px rgba(15, 23, 42, 0.06);
       border: 1px solid #e2e8f0;
       overflow: hidden;
+      transition: transform 0.2s, box-shadow 0.2s;
     }
-    .game-group-header {
-      padding: 20px 24px 16px;
+    .lab-group:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 32px rgba(15, 23, 42, 0.1);
+    }
+
+    .lab-group-header {
+      padding: 22px 26px 18px;
       border-bottom: 1px solid #f1f5f9;
-      display: flex; align-items: center; gap: 12px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
     }
-    .game-icon {
-      width: 44px; height: 44px; border-radius: 12px;
+    .lab-icon {
+      width: 48px; height: 48px;
+      border-radius: 14px;
       display: flex; align-items: center; justify-content: center;
-      font-size: 1.5rem; flex-shrink: 0;
+      font-size: 1.7rem;
+      flex-shrink: 0;
     }
-    .game-icon.chess { background: linear-gradient(135deg, #c9a22c22, #c9a22c44); }
+    .lab-icon.chess { background: linear-gradient(135deg, #fef3c7, #fde68a); }
 
-    .game-group-info h2 { font-size: 1.1rem; font-weight: 800; color: #1e293b; }
-    .game-group-info p { font-size: 0.85rem; color: #64748b; font-weight: 500; margin-top: 2px; }
+    .lab-group-info h2 {
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: #1e293b;
+      letter-spacing: -0.3px;
+    }
+    .lab-group-info p {
+      font-size: 0.86rem;
+      color: #64748b;
+      font-weight: 500;
+      margin-top: 3px;
+    }
 
-    .game-pages { padding: 16px 24px 20px; display: flex; flex-direction: column; gap: 10px; }
+    .lab-pages {
+      padding: 18px 26px 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
 
     .page-link {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 14px 18px; border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 15px 18px;
+      border-radius: 12px;
       border: 1.5px solid #e2e8f0;
-      text-decoration: none; color: #1e293b;
+      text-decoration: none;
+      color: #1e293b;
       transition: all 0.15s;
       background: #f8fafc;
     }
@@ -73,102 +128,133 @@
     }
     .page-link-left { display: flex; align-items: center; gap: 12px; }
     .page-badge {
-      width: 28px; height: 28px; border-radius: 8px;
+      width: 30px; height: 30px;
+      border-radius: 9px;
       background: linear-gradient(135deg, #2563eb, #1e40af);
-      color: white; font-size: 0.78rem; font-weight: 800;
+      color: white;
+      font-size: 0.82rem;
+      font-weight: 800;
       display: flex; align-items: center; justify-content: center;
       flex-shrink: 0;
     }
-    .page-link-text { font-size: 0.95rem; font-weight: 600; }
+    .page-link-text { font-size: 0.96rem; font-weight: 700; }
     .page-link-sub { font-size: 0.8rem; color: #64748b; font-weight: 500; margin-top: 2px; }
-    .page-link-arrow { color: #94a3b8; font-size: 1rem; transition: transform 0.15s; }
+    .page-link-arrow { color: #94a3b8; font-size: 1.05rem; transition: transform 0.15s; }
     .page-link:hover .page-link-arrow { transform: translateX(4px); color: #2563eb; }
 
     /* ── Coming soon placeholder ── */
     .coming-soon {
-      padding: 20px 24px;
-      font-size: 0.88rem; color: #94a3b8; font-weight: 500;
-      text-align: center; font-style: italic;
+      background: transparent;
+      border: 2px dashed #cbd5e1;
+      border-radius: 20px;
+      padding: 32px 24px;
+      text-align: center;
+      color: #94a3b8;
+      font-weight: 500;
+      font-size: 0.92rem;
+    }
+    .coming-soon .cs-icon {
+      font-size: 1.6rem;
+      display: block;
+      margin-bottom: 6px;
     }
 
     footer {
-      margin-top: 48px;
-      font-size: 0.88rem; color: #94a3b8; text-align: center;
+      margin-top: 56px;
+      font-size: 0.85rem;
+      color: #94a3b8;
+      text-align: center;
+    }
+
+    /* ── Mobile ── */
+    @media (max-width: 520px) {
+      body { padding: 40px 16px 50px; }
+      .page-header { margin-bottom: 36px; }
+      .page-header h1 { font-size: 1.9rem; }
+      .page-header .tagline { font-size: 0.92rem; }
+      .lab-group-header { padding: 18px 20px 14px; }
+      .lab-pages { padding: 14px 20px 18px; }
+      .lab-icon { width: 42px; height: 42px; font-size: 1.5rem; }
+      .lab-group-info h2 { font-size: 1.05rem; }
+      .page-link { padding: 13px 15px; }
     }
   </style>
 </head>
 <body>
 
-  <a class="back-link" href="index.html">← 단원 플래너로 돌아가기</a>
+  <div class="container">
 
-  <div class="page-header">
-    <h1>🎮 게임 모음</h1>
-    <p>수업에 활용할 수 있는 수학 탐구 게임들을 모아뒀어요.</p>
-  </div>
+    <div class="page-header">
+      <h1><span class="emoji">🧩🎲✨</span><span class="brand">AI-Labs</span></h1>
+      <p class="tagline">AI와 함께 하는 수학 탐구 놀이터</p>
+    </div>
 
-  <div class="game-collection">
+    <div class="lab-collection">
 
-    <!-- 훼손된 체스판 도미노 -->
-    <div class="game-group">
-      <div class="game-group-header">
-        <div class="game-icon chess">♟️</div>
-        <div class="game-group-info">
-          <h2>훼손된 체스판 도미노 도전</h2>
-          <p>두 칸이 제거된 체스판 — 도미노로 채울 수 있을까? 패턴을 발견하라!</p>
+      <!-- 훼손된 체스판 도미노 시리즈 -->
+      <div class="lab-group">
+        <div class="lab-group-header">
+          <div class="lab-icon chess">♟️</div>
+          <div class="lab-group-info">
+            <h2>훼손된 체스판 도미노 시리즈</h2>
+            <p>두 칸이 제거된 체스판 — 도미노로 채울 수 있을까? 패턴 탐구부터 증명까지 4단계</p>
+          </div>
+        </div>
+        <div class="lab-pages">
+          <a class="page-link" href="1-domino-challenge/domino-challenge.html" target="_blank">
+            <div class="page-link-left">
+              <div class="page-badge">1</div>
+              <div>
+                <div class="page-link-text">8×8 체스판 도전</div>
+                <div class="page-link-sub">대각선 제거 / 한 줄 끝 제거 / 자유 선택 — 3가지 모드</div>
+              </div>
+            </div>
+            <span class="page-link-arrow">→</span>
+          </a>
+          <a class="page-link" href="1-domino-challenge/domino-challenge-2.html" target="_blank">
+            <div class="page-link-left">
+              <div class="page-badge">2</div>
+              <div>
+                <div class="page-link-text">패턴 찾기 — 6×6 & 4×4</div>
+                <div class="page-link-sub">작은 판에서 같은 색/다른 색 비교 실험 (3단계)</div>
+              </div>
+            </div>
+            <span class="page-link-arrow">→</span>
+          </a>
+          <a class="page-link" href="1-domino-challenge/domino-challenge-3.html" target="_blank">
+            <div class="page-link-left">
+              <div class="page-badge">3</div>
+              <div>
+                <div class="page-link-text">왜 항상 가능할까? — 증명 힌트</div>
+                <div class="page-link-sub">해밀턴 순환 경로 시각화 + 힌트 제시</div>
+              </div>
+            </div>
+            <span class="page-link-arrow">→</span>
+          </a>
+          <a class="page-link" href="1-domino-challenge/domino-challenge-4.html" target="_blank">
+            <div class="page-link-left">
+              <div class="page-badge">4</div>
+              <div>
+                <div class="page-link-text">증명 풀이</div>
+                <div class="page-link-sub">해밀턴 순환 경로를 이용한 증명 전체 해설</div>
+              </div>
+            </div>
+            <span class="page-link-arrow">→</span>
+          </a>
         </div>
       </div>
-      <div class="game-pages">
-        <a class="page-link" href="domino-challenge.html" target="_blank">
-          <div class="page-link-left">
-            <div class="page-badge">1</div>
-            <div>
-              <div class="page-link-text">8×8 체스판 도전</div>
-              <div class="page-link-sub">대각선 제거 / 한 줄 끝 제거 / 자유 선택 — 3가지 모드</div>
-            </div>
-          </div>
-          <span class="page-link-arrow">→</span>
-        </a>
-        <a class="page-link" href="domino-challenge-2.html" target="_blank">
-          <div class="page-link-left">
-            <div class="page-badge">2</div>
-            <div>
-              <div class="page-link-text">패턴 찾기 — 6×6 & 4×4</div>
-              <div class="page-link-sub">작은 판에서 같은 색/다른 색 비교 실험 (3단계)</div>
-            </div>
-          </div>
-          <span class="page-link-arrow">→</span>
-        </a>
-        <a class="page-link" href="domino-challenge-3.html" target="_blank">
-          <div class="page-link-left">
-            <div class="page-badge">3</div>
-            <div>
-              <div class="page-link-text">왜 항상 가능할까? — 증명 힌트</div>
-              <div class="page-link-sub">해밀턴 순환 경로 시각화 + 힌트 제시</div>
-            </div>
-          </div>
-          <span class="page-link-arrow">→</span>
-        </a>
-        <a class="page-link" href="domino-challenge-4.html" target="_blank">
-          <div class="page-link-left">
-            <div class="page-badge">4</div>
-            <div>
-              <div class="page-link-text">증명 풀이</div>
-              <div class="page-link-sub">해밀턴 순환 경로를 이용한 증명 전체 해설</div>
-            </div>
-          </div>
-          <span class="page-link-arrow">→</span>
-        </a>
+
+      <!-- 앞으로 추가될 탐구 자리 -->
+      <div class="coming-soon">
+        <span class="cs-icon">✨</span>
+        새로운 탐구가 곧 이 자리에 추가됩니다
       </div>
+
     </div>
 
-    <!-- 앞으로 추가될 게임 자리 -->
-    <div class="game-group" style="border-style: dashed; background: transparent; box-shadow: none;">
-      <div class="coming-soon">앞으로 더 많은 게임이 추가될 예정입니다 ✨</div>
-    </div>
+    <footer>&copy; 2026 서울사대부중 2학년 수학B 허철호 선생님 · All rights reserved</footer>
 
   </div>
-
-  <footer>서울사대부중 2학년 수학B 허철호 선생님 &copy; All rights reserved</footer>
 
 </body>
 </html>
