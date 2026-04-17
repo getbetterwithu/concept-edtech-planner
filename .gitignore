@@ -3,3 +3,6 @@
 
 # Local backups (not deployed)
 .backups/
+
+# Large reference files (synced via Google Drive)
+reference/
