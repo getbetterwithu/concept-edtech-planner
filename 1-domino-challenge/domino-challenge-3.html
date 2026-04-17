@@ -356,7 +356,10 @@
       font-weight: 700;
       color: #78350f;
       transition: all 0.3s;
+      cursor: pointer;
+      user-select: none;
     }
+    .phase-pill:hover { transform: translateY(-1px); filter: brightness(1.05); }
     .phase-pill.active {
       background: linear-gradient(135deg, #fde68a, #fcd34d);
       border-color: #f59e0b;
@@ -1115,6 +1118,30 @@
 const N = 4;
 const TOTAL = N * N;
 
+// ── 진행 상태 저장/복원 (localStorage) ──────────────────────────────
+const PROGRESS_STORAGE_KEY = 'domino-ch3-progress';
+function saveProgress() {
+  try {
+    const data = {
+      path,
+      completed: typeof completed !== 'undefined' ? completed : false,
+      step2Unlocked: typeof step2Unlocked !== 'undefined' ? step2Unlocked : false,
+      numberingDone: typeof numberingDone !== 'undefined' ? numberingDone : false,
+      step3Unlocked: typeof step3Unlocked !== 'undefined' ? step3Unlocked : false,
+      step4Unlocked: !document.getElementById('step4Card')?.classList.contains('locked'),
+      step5Unlocked: !document.getElementById('step5Card')?.classList.contains('locked'),
+      step6Unlocked: !document.getElementById('step6Card')?.classList.contains('locked'),
+    };
+    localStorage.setItem(PROGRESS_STORAGE_KEY, JSON.stringify(data));
+  } catch (e) {}
+}
+function readSavedProgress() {
+  try {
+    const raw = localStorage.getItem(PROGRESS_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) { return null; }
+}
+
 // 경로 상태: path[i] = {r, c}, 0번이 출발 칸
 let path = [];
 
@@ -1189,6 +1216,7 @@ function handleCellClick(r, c) {
     path.push(clicked);
     renderPath();
     setStatus('info', `출발! 인접한 칸으로 이동하세요 (${path.length}/${TOTAL})`);
+    saveProgress();
     return;
   }
 
@@ -1201,6 +1229,7 @@ function handleCellClick(r, c) {
 
   path.push(clicked);
   renderPath();
+  saveProgress();
 
   // 16칸 모두 채움 — 이제 출발 칸으로 되돌아올 수 있는지 확인
   if (path.length === TOTAL) {
@@ -1229,6 +1258,7 @@ function tryCompleteLoop() {
   sq4El(path[0].r, path[0].c).classList.remove('adj-hint');
   // 보드 클릭 비활성화
   board4El.style.pointerEvents = 'none';
+  saveProgress();
 }
 
 let completed = false;
@@ -1242,11 +1272,13 @@ function undoLast() {
   } else {
     setStatus('info', `${path.length}번째 칸까지 — 다음 인접 칸을 클릭하세요`);
   }
+  saveProgress();
 }
 
 function resetMission() {
   path = [];
   completed = false;
+  if (typeof _initDone !== 'undefined' && _initDone) saveProgress();
   board4El.style.pointerEvents = '';
   // 모든 칸 초기화
   for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
@@ -1339,6 +1371,7 @@ toStep2Btn.addEventListener('click', () => {
   }
   // 스크롤 이동
   step2Card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  saveProgress();
 });
 
 numberBtn.addEventListener('click', () => {
@@ -1364,6 +1397,7 @@ numberBtn.addEventListener('click', () => {
       statusLine2.className = 'status-line win';
       statusLine2.textContent = '🎉 순서대로 1번부터 16번까지 매겨졌어요!';
       toStep3Btn.classList.add('visible');
+      saveProgress();
       return;
     }
     const p = path[i];
@@ -1446,6 +1480,7 @@ toStep3Btn.addEventListener('click', () => {
   drawRingEmpty();
 
   step3Card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  saveProgress();
 });
 
 // ── 타원 고리 캔버스 ──────────────────────────────────────────────────────
@@ -1660,6 +1695,7 @@ let phase4 = 'A';         // 'A' = 같은 색, 'B' = 다른 색
 let removedIndices = [];  // 고리에서 제거한 번호 (0~15)
 let phase4Filled = false;
 let phase4ACompleted = false;
+let phase4BCompleted = false;
 
 // 도미노 애니메이션용 상태
 let placedDominos = []; // { a, b, color }
@@ -2007,6 +2043,7 @@ function showPhaseResult() {
     setStatus4('info', '두 실험의 결과를 비교해보세요');
     phasePillB.classList.remove('active');
     phasePillB.classList.add('done');
+    phase4BCompleted = true;
     toStep5Btn.classList.add('visible');
   }
 }
@@ -2027,24 +2064,40 @@ resetPhaseBtn.addEventListener('click', () => {
   updatePhase4Status();
 });
 
-goPhaseBBtn.addEventListener('click', () => {
-  // Part B로 전환
-  phase4 = 'B';
+function switchPhase4(target) {
+  if (fillAnimRunning) return;
+  if (phase4 === target) return;
+  phase4 = target;
   phase4Filled = false;
   removedIndices = [];
   placedDominos = [];
   leftoverCell = null;
-  phase4ACompleted = true;
-  phasePillB.classList.add('active');
-  goPhaseBBtn.style.display = 'none';
+  fillDominoBtn.disabled = true;
   obsBox4.classList.remove('visible');
   obsBox4.style.borderLeftColor = '';
   obsBox4.style.background = '';
   obsText4.style.color = '';
-  step4Desc.innerHTML = '이번엔 <strong>서로 다른 색</strong> 두 칸을 빼보고, 결과가 어떻게 달라지는지 확인해봅시다.';
+  goPhaseBBtn.style.display = 'none';
+  // pill 상태 갱신 — 선택된 건 active, 방문한 적 있는 반대쪽은 done
+  phasePillA.classList.remove('active', 'done');
+  phasePillB.classList.remove('active', 'done');
+  if (target === 'A') {
+    phasePillA.classList.add('active');
+    if (phase4ACompleted || phase4BCompleted) phasePillB.classList.add('done');
+    step4Desc.innerHTML = '먼저 <strong>같은 색</strong> 두 칸부터 빼볼까요?';
+  } else {
+    phasePillB.classList.add('active');
+    phase4ACompleted = true;
+    if (phase4ACompleted) phasePillA.classList.add('done');
+    step4Desc.innerHTML = '이번엔 <strong>서로 다른 색</strong> 두 칸을 빼보고, 결과가 어떻게 달라지는지 확인해봅시다.';
+  }
   drawRing4();
   updatePhase4Status();
-});
+}
+
+goPhaseBBtn.addEventListener('click', () => switchPhase4('B'));
+phasePillA.addEventListener('click', () => switchPhase4('A'));
+phasePillB.addEventListener('click', () => switchPhase4('B'));
 
 // 3단계 → 4단계 진입
 toStep4Btn.addEventListener('click', () => {
@@ -2057,6 +2110,7 @@ toStep4Btn.addEventListener('click', () => {
   drawRing4();
   updatePhase4Status();
   step4Card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  saveProgress();
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -2071,6 +2125,7 @@ toStep5Btn.addEventListener('click', () => {
   // 5단계는 읽기 단계이므로 진입 즉시 다음 단계 버튼 표시
   toStep6Btn.classList.add('visible');
   step5Card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  saveProgress();
 });
 
 // ── 공통: "다음 단계로" 버튼 한 번 클릭 후 회색 비활성화 ─────────────────
@@ -2189,6 +2244,9 @@ toStep6Btn.addEventListener('click', () => {
   step6Card.classList.remove('locked');
   drawBig8Board();
   step6Card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  saveProgress();
+  const gate = document.getElementById('nextGateSection');
+  if (gate) gate.hidden = false;
 });
 
 // ── 🔧 Developer test shortcut (선생님 전용) ─────────────────────────────
@@ -2368,6 +2426,10 @@ document.addEventListener('keydown', e => {
   // 모든 "다음 단계로" 버튼은 이미 용도 끝 → used 처리
   document.querySelectorAll('.next-step-btn').forEach(b => b.classList.add('used'));
 
+  // 암호 게이트 노출
+  const gate = document.getElementById('nextGateSection');
+  if (gate) gate.hidden = false;
+
   // 6단계로 스크롤
   step6Card.scrollIntoView({ behavior: 'smooth', block: 'start' });
 });
@@ -2413,9 +2475,125 @@ drawRingEmpty();
 // ═══════════════════════════════════════════════════════════════════════════
 // 초기화
 // ═══════════════════════════════════════════════════════════════════════════
+let _initDone = false;
 buildBoard4();
 buildBoard4b();
 resetMission();
+
+// ── 저장된 진행 상태 복원 ────────────────────────────────────────────
+(function restoreProgress() {
+  const saved = readSavedProgress();
+  if (!saved) return;
+
+  // 1단계: path 복원
+  if (Array.isArray(saved.path) && saved.path.length > 0) {
+    path = saved.path.map(p => ({ r: p.r, c: p.c }));
+    renderPath();
+    if (saved.completed) {
+      completed = true;
+      sq4El(path[0].r, path[0].c).classList.add('start');
+      sq4El(path[0].r, path[0].c).classList.remove('adj-hint');
+      board4El.style.pointerEvents = 'none';
+      setStatus('win', '🎉 완성! 모든 칸을 지나 출발점으로 돌아왔어요');
+      toStep2Btn.classList.add('visible');
+    } else {
+      setStatus('info', `${path.length}번째 칸까지 — 다음 인접 칸을 클릭하세요`);
+    }
+  }
+
+  // 각 단계 잠금 해제 (해제된 단계는 해당 진입 버튼을 한번 눌렀다 치고 재진입)
+  try {
+  if (saved.step2Unlocked) toStep2Btn.click();
+  if (saved.numberingDone) {
+    // 번호 매김을 애니메이션 없이 즉시 완료 상태로
+    numberingDone = true;
+    numberBtn.disabled = true;
+    numberBtn.textContent = '✓ 번호 매김 완료';
+    statusLine2.className = 'status-line win';
+    statusLine2.textContent = '🎉 순서대로 1번부터 16번까지 매겨졌어요!';
+    // 2단계 보드의 화살표를 번호로 교체
+    for (let i = 0; i < path.length; i++) {
+      const sq = sq4bEl(path[i].r, path[i].c);
+      sq.innerHTML = '';
+      const txt = document.createElement('span');
+      txt.textContent = i + 1;
+      txt.style.cssText = 'position:relative;z-index:2;pointer-events:none;';
+      sq.appendChild(txt);
+    }
+    toStep3Btn.classList.add('visible');
+  }
+  if (saved.step3Unlocked) toStep3Btn.click();
+  if (saved.step4Unlocked) toStep4Btn.click();
+  if (saved.step5Unlocked) toStep5Btn.click();
+  if (saved.step6Unlocked) toStep6Btn.click();
+  } catch (e) {}
+
+})();
+_initDone = true;
+</script>
+
+<!-- ── 다음 활동 이동 게이트 (6단계 진입 시 표시) ───────────────────────── -->
+<section class="next-gate" id="nextGateSection" aria-label="다음 활동으로 이동" hidden>
+  <div class="next-gate-card">
+    <div class="next-gate-title">다음 활동으로 이동</div>
+    <div class="next-gate-desc">선생님이 알려주시는 암호를 입력하세요.</div>
+    <form class="next-gate-form" id="nextGateForm" autocomplete="off">
+      <input type="text" id="nextGateInput" class="next-gate-input" placeholder="암호 입력" autocomplete="off" spellcheck="false" />
+      <button type="submit" class="next-gate-btn">다음으로 →</button>
+    </form>
+    <div class="next-gate-msg" id="nextGateMsg"></div>
+  </div>
+</section>
+<style>
+  .next-gate { width: 100%; max-width: 560px; margin: 40px auto 60px; padding: 0 16px; }
+  .next-gate-card {
+    background: #fff8ec; border: 2px solid #d4a86a; border-radius: 16px;
+    padding: 22px 24px; box-shadow: 0 6px 20px rgba(0,0,0,0.12);
+  }
+  .next-gate-title { font-size: 1.1rem; font-weight: 800; color: #5a3310; margin-bottom: 4px; }
+  .next-gate-desc { font-size: 0.9rem; color: #7a5630; margin-bottom: 14px; }
+  .next-gate-form { display: flex; gap: 8px; }
+  .next-gate-input {
+    flex: 1; min-width: 0; padding: 10px 14px; font-size: 1rem; font-family: inherit;
+    border: 1.5px solid #c9a06a; border-radius: 10px; background: #fff; color: #2c1a07;
+    outline: none; transition: border-color 0.15s;
+  }
+  .next-gate-input:focus { border-color: #8a5a1c; }
+  .next-gate-btn {
+    padding: 10px 18px; font-size: 0.95rem; font-weight: 700; font-family: inherit;
+    background: #8a5a1c; color: #fff; border: none; border-radius: 10px; cursor: pointer;
+    transition: background 0.15s;
+  }
+  .next-gate-btn:hover { background: #6e4714; }
+  .next-gate-msg { min-height: 1.2em; margin-top: 10px; font-size: 0.88rem; font-weight: 600; }
+  .next-gate-msg.err { color: #b91c1c; }
+  .next-gate-msg.ok  { color: #166534; }
+  @media (max-width: 520px) {
+    .next-gate-form { flex-direction: column; }
+    .next-gate-btn { width: 100%; }
+  }
+</style>
+<script>
+  (function () {
+    const form = document.getElementById('nextGateForm');
+    const input = document.getElementById('nextGateInput');
+    const msg = document.getElementById('nextGateMsg');
+    const CODE = 'challenge';
+    const NEXT = 'domino-challenge-4.html';
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const val = (input.value || '').trim().toLowerCase();
+      if (val === CODE) {
+        msg.textContent = '✓ 이동합니다…';
+        msg.className = 'next-gate-msg ok';
+        window.location.href = NEXT;
+      } else {
+        msg.textContent = '암호가 맞지 않습니다.';
+        msg.className = 'next-gate-msg err';
+        input.select();
+      }
+    });
+  })();
 </script>
 </body>
 </html>

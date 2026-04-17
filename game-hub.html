@@ -142,6 +142,109 @@
     .page-link-arrow { color: #94a3b8; font-size: 1.05rem; transition: transform 0.15s; }
     .page-link:hover .page-link-arrow { transform: translateX(4px); color: #2563eb; }
 
+    /* ── Teacher notes (접이식) ── */
+    .teacher-notes {
+      margin: 4px 26px 22px;
+      border-top: 1px dashed #e2e8f0;
+      padding-top: 14px;
+    }
+    .teacher-notes summary {
+      cursor: pointer;
+      list-style: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      border-radius: 10px;
+      background: #fef9e7;
+      border: 1px solid #f2e2a8;
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: #78350f;
+      user-select: none;
+      transition: background 0.15s;
+    }
+    .teacher-notes summary::-webkit-details-marker { display: none; }
+    .teacher-notes summary:hover { background: #fdf3d0; }
+    .teacher-notes .tn-icon { font-size: 1rem; }
+    .teacher-notes[open] summary { background: #fdf3d0; }
+    .tn-body {
+      padding: 14px 6px 4px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .tn-section h3 {
+      font-size: 0.88rem;
+      font-weight: 800;
+      color: #475569;
+      margin-bottom: 8px;
+      letter-spacing: -0.2px;
+    }
+    .tn-list, .tn-codes {
+      list-style: none;
+      padding-left: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 0.88rem;
+      color: #334155;
+      line-height: 1.5;
+    }
+    .tn-list li { padding-left: 18px; position: relative; }
+    .tn-list li::before {
+      content: '';
+      position: absolute;
+      left: 4px; top: 0.55em;
+      width: 6px; height: 6px;
+      background: #2563eb;
+      border-radius: 50%;
+    }
+    .tn-codes li { padding-left: 14px; position: relative; }
+    .tn-codes li::before {
+      content: '•';
+      position: absolute;
+      left: 2px; top: 0;
+      color: #94a3b8;
+    }
+    .tn-codes code {
+      background: #f1f5f9;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 1px 7px;
+      font-family: 'SFMono-Regular', Menlo, Consolas, monospace;
+      font-size: 0.85rem;
+      color: #1e293b;
+      font-weight: 600;
+    }
+    .tn-codes kbd {
+      background: #fff;
+      border: 1px solid #cbd5e1;
+      border-bottom-width: 2px;
+      border-radius: 5px;
+      padding: 1px 6px;
+      font-family: 'SFMono-Regular', Menlo, Consolas, monospace;
+      font-size: 0.8rem;
+      color: #334155;
+      font-weight: 700;
+      margin: 0 1px;
+    }
+    .tn-note {
+      font-size: 0.82rem;
+      color: #64748b;
+      margin-top: 8px;
+      line-height: 1.5;
+    }
+    .tn-note code {
+      background: #f1f5f9;
+      border: 1px solid #e2e8f0;
+      border-radius: 5px;
+      padding: 0 5px;
+      font-family: 'SFMono-Regular', Menlo, Consolas, monospace;
+      font-size: 0.78rem;
+      color: #1e293b;
+    }
+
     /* ── Coming soon placeholder ── */
     .coming-soon {
       background: transparent;
@@ -203,45 +306,57 @@
         <div class="lab-pages">
           <a class="page-link" href="1-domino-challenge/domino-challenge.html" target="_blank">
             <div class="page-link-left">
-              <div class="page-badge">1</div>
+              <div class="page-badge">▶</div>
               <div>
-                <div class="page-link-text">8×8 체스판 도전</div>
-                <div class="page-link-sub">대각선 제거 / 한 줄 끝 제거 / 자유 선택 — 3가지 모드</div>
-              </div>
-            </div>
-            <span class="page-link-arrow">→</span>
-          </a>
-          <a class="page-link" href="1-domino-challenge/domino-challenge-2.html" target="_blank">
-            <div class="page-link-left">
-              <div class="page-badge">2</div>
-              <div>
-                <div class="page-link-text">패턴 찾기 — 6×6 & 4×4</div>
-                <div class="page-link-sub">작은 판에서 같은 색/다른 색 비교 실험 (3단계)</div>
-              </div>
-            </div>
-            <span class="page-link-arrow">→</span>
-          </a>
-          <a class="page-link" href="1-domino-challenge/domino-challenge-3.html" target="_blank">
-            <div class="page-link-left">
-              <div class="page-badge">3</div>
-              <div>
-                <div class="page-link-text">왜 항상 가능할까? — 증명 힌트</div>
-                <div class="page-link-sub">해밀턴 순환 경로 시각화 + 힌트 제시</div>
-              </div>
-            </div>
-            <span class="page-link-arrow">→</span>
-          </a>
-          <a class="page-link" href="1-domino-challenge/domino-challenge-4.html" target="_blank">
-            <div class="page-link-left">
-              <div class="page-badge">4</div>
-              <div>
-                <div class="page-link-text">증명 풀이</div>
-                <div class="page-link-sub">해밀턴 순환 경로를 이용한 증명 전체 해설</div>
+                <div class="page-link-text">활동 시작 — 8×8 체스판 도전</div>
+                <div class="page-link-sub">4단계 시리즈의 1단계부터 시작합니다. 다음 단계는 암호 입력으로 이동합니다.</div>
               </div>
             </div>
             <span class="page-link-arrow">→</span>
           </a>
         </div>
+
+        <!-- 교사용 안내 (학생에게도 보이지만 접힘 상태) -->
+        <details class="teacher-notes" open>
+          <summary>
+            <span class="tn-icon">🔑</span>
+            <span class="tn-label">선생님용 안내 (암호 · 마스터키)</span>
+          </summary>
+          <div class="tn-body">
+            <div class="tn-section">
+              <h3>학습 흐름 (4단계)</h3>
+              <ol class="tn-list">
+                <li><b>1단계 · 8×8 체스판 도전</b> — 직접 도미노를 놓으며 "언제 가능/불가능한가" 탐구</li>
+                <li><b>2단계 · 패턴 찾기 (6×6 & 4×4)</b> — 같은 색 / 다른 색 제거 비교 실험</li>
+                <li><b>3단계 · 증명 힌트</b> — 해밀턴 순환 경로를 스스로 발견</li>
+                <li><b>4단계 · 증명 풀이</b> — 순환 경로를 이용한 완성된 증명</li>
+              </ol>
+            </div>
+            <div class="tn-section">
+              <h3>다음 페이지 이동 암호</h3>
+              <ul class="tn-codes">
+                <li>1단계 → 2단계: <code>chess</code></li>
+                <li>2단계 → 3단계: <code>domino</code></li>
+                <li>3단계 → 4단계: <code>challenge</code></li>
+              </ul>
+              <p class="tn-note">각 페이지 맨 아래 암호 입력창에 입력하면 다음 페이지로 이동합니다. 수업 진행 타이밍에 맞춰 암호를 공개하세요.</p>
+            </div>
+            <div class="tn-section">
+              <h3>마스터키 (선생님 전용 단축키)</h3>
+              <ul class="tn-codes">
+                <li><b>2단계</b> · <kbd>Shift</kbd>+<kbd>T</kbd> — 타이머 5초로 점프</li>
+                <li><b>2단계</b> · <kbd>Shift</kbd>+<kbd>F</kbd> — 타이머 즉시 만료</li>
+                <li><b>2단계</b> · <kbd>Shift</kbd>+<kbd>U</kbd> — 모든 스테이지 잠금 해제</li>
+                <li><b>3단계</b> · <kbd>Shift</kbd>+<kbd>F</kbd> — 1~6단계 전부 완료 상태로 점프</li>
+              </ul>
+              <p class="tn-note">한글 입력 상태에서도 작동합니다. 입력창에 포커스가 있으면 무시됩니다.</p>
+            </div>
+            <div class="tn-section">
+              <h3>다른 선생님과 공유할 때</h3>
+              <p class="tn-note">학생에게는 이 허브 URL 하나만 공유하면 됩니다. 암호 3개(<code>chess</code> / <code>domino</code> / <code>challenge</code>)를 수업 진행 중 단계에 맞춰 공개하세요.</p>
+            </div>
+          </div>
+        </details>
       </div>
 
       <!-- 앞으로 추가될 탐구 자리 -->
