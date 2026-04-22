@@ -322,6 +322,29 @@
   </style>
 </head>
 <body>
+<a href="domino-challenge-3.html" class="prev-page-btn" title="이전 단계로 돌아가기" aria-label="이전 단계로 돌아가기">← 이전 단계</a>
+<style>
+  .prev-page-btn {
+    position: fixed; top: 14px; left: 14px; z-index: 9999;
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 9px 16px; border-radius: 10px;
+    background: rgba(120, 120, 120, 0.18);
+    color: rgba(230, 230, 230, 0.72);
+    font-size: 0.9rem; font-weight: 600; text-decoration: none;
+    font-family: 'Noto Sans KR', sans-serif;
+    backdrop-filter: blur(6px);
+    border: 1px solid rgba(200, 200, 200, 0.18);
+    transition: background 0.15s, color 0.15s, transform 0.15s;
+  }
+  .prev-page-btn:hover {
+    background: rgba(120, 120, 120, 0.32);
+    color: rgba(245, 245, 245, 0.95);
+    transform: translateX(-2px);
+  }
+  @media (max-width: 520px) {
+    .prev-page-btn { top: 8px; left: 8px; padding: 7px 12px; font-size: 0.82rem; }
+  }
+</style>
 
 <header class="app-header">
   <h1 class="app-title">📘 도미노 도전 — 증명 풀이</h1>

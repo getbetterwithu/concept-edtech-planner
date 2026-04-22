@@ -1123,6 +1123,11 @@ if (savedGameMode && savedGameMode !== 1) {
 }
 // 탭 UI에 active 표시
 document.querySelectorAll('.mode-tab').forEach(t => t.classList.toggle('active', +t.dataset.mode === gameMode));
+// 초기 게이트 노출: mode 3일 때만 표시 (setMode가 처음엔 호출 안되므로 여기서 직접 처리)
+(function initGateVisibility() {
+  const gate = document.getElementById('nextGateSection');
+  if (gate) gate.hidden = (gameMode !== 3);
+})();
 // localStorage에 복원할 상태가 있으면 그걸 그리고, 없으면 셋업 초기화
 if (localStorage.getItem(BOARDS_STORAGE_KEY)) {
   // 복원된 setup 선택 상태를 DOM에 다시 반영
