@@ -14,18 +14,18 @@
       background: #f8fafc;
       color: #1e293b;
       min-height: 100vh;
-      padding: 56px 20px 60px;
+      padding: 48px 20px 60px;
     }
 
     .container {
-      max-width: 760px;
+      max-width: 1200px;
       margin: 0 auto;
     }
 
     /* ── Page header ── */
     .page-header {
       text-align: center;
-      margin-bottom: 48px;
+      margin-bottom: 44px;
     }
     .page-header h1 {
       font-size: 2.4rem;
@@ -36,11 +36,7 @@
       align-items: center;
       gap: 10px;
     }
-    .page-header h1 .emoji {
-      font-size: 1.9rem;
-      line-height: 1;
-      /* 컬러 이모지 원본 색상 유지 — 그라디언트 영향 안 받음 */
-    }
+    .page-header h1 .emoji { font-size: 1.9rem; line-height: 1; }
     .page-header h1 .brand {
       background: linear-gradient(135deg, #1e293b 0%, #2563eb 100%);
       -webkit-background-clip: text;
@@ -53,213 +49,118 @@
       font-weight: 500;
     }
 
-    /* ── Lab collection ── */
-    .lab-collection {
+    /* ── Padlet-style board ── */
+    .board {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      align-items: start;
+    }
+
+    .column {
+      background: #f1f5f9;
+      border-radius: 18px;
+      padding: 18px;
       display: flex;
       flex-direction: column;
-      gap: 24px;
-    }
-
-    .lab-group {
-      background: white;
-      border-radius: 20px;
-      box-shadow: 0 4px 24px rgba(15, 23, 42, 0.06);
-      border: 1px solid #e2e8f0;
-      overflow: hidden;
-      transition: transform 0.2s, box-shadow 0.2s;
-    }
-    .lab-group:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 32px rgba(15, 23, 42, 0.1);
-    }
-
-    .lab-group-header {
-      padding: 22px 26px 18px;
-      border-bottom: 1px solid #f1f5f9;
-      display: flex;
-      align-items: center;
       gap: 14px;
+      min-height: 220px;
     }
-    .lab-icon {
-      width: 48px; height: 48px;
-      border-radius: 14px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 1.7rem;
-      flex-shrink: 0;
-    }
-    .lab-icon.chess { background: linear-gradient(135deg, #fef3c7, #fde68a); }
+    /* 컬럼별 톤 */
+    .column.col-inquiry { background: #fef9e7; border: 1px solid #f2e2a8; }
+    .column.col-novel { background: #eff6ff; border: 1px solid #bfdbfe; }
+    .column.col-future { background: #f8fafc; border: 1px dashed #cbd5e1; }
 
-    .lab-group-info h2 {
-      font-size: 1.15rem;
-      font-weight: 800;
-      color: #1e293b;
-      letter-spacing: -0.3px;
-    }
-    .lab-group-info p {
-      font-size: 0.86rem;
-      color: #64748b;
-      font-weight: 500;
-      margin-top: 3px;
-    }
-
-    .lab-pages {
-      padding: 18px 26px 22px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .page-link {
+    .column-header {
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      padding: 15px 18px;
-      border-radius: 12px;
-      border: 1.5px solid #e2e8f0;
+      gap: 10px;
+      padding: 4px 4px 8px;
+    }
+    .column-header .col-emoji {
+      font-size: 1.4rem;
+      line-height: 1;
+    }
+    .column-header h2 {
+      font-size: 1rem;
+      font-weight: 800;
+      letter-spacing: -0.3px;
+      color: #334155;
+    }
+    .col-inquiry .column-header h2 { color: #78350f; }
+    .col-novel .column-header h2 { color: #1e40af; }
+    .col-future .column-header h2 { color: #94a3b8; }
+
+    /* ── Card ── */
+    .card {
+      background: white;
+      border-radius: 14px;
+      padding: 18px 18px 16px;
+      box-shadow: 0 2px 8px rgba(15, 23, 42, 0.05);
       text-decoration: none;
       color: #1e293b;
-      transition: all 0.15s;
-      background: #f8fafc;
+      display: block;
+      transition: transform 0.15s, box-shadow 0.15s;
+      border: 1.5px solid transparent;
     }
-    .page-link:hover {
-      border-color: #2563eb;
-      background: #eff6ff;
-      transform: translateX(3px);
+    .card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 6px 20px rgba(15, 23, 42, 0.1);
     }
-    .page-link-left { display: flex; align-items: center; gap: 12px; }
-    .page-badge {
-      width: 30px; height: 30px;
-      border-radius: 9px;
-      background: linear-gradient(135deg, #2563eb, #1e40af);
-      color: white;
-      font-size: 0.82rem;
-      font-weight: 800;
-      display: flex; align-items: center; justify-content: center;
-      flex-shrink: 0;
-    }
-    .page-link-text { font-size: 0.96rem; font-weight: 700; }
-    .page-link-sub { font-size: 0.8rem; color: #64748b; font-weight: 500; margin-top: 2px; }
-    .page-link-arrow { color: #94a3b8; font-size: 1.05rem; transition: transform 0.15s; }
-    .page-link:hover .page-link-arrow { transform: translateX(4px); color: #2563eb; }
+    .col-inquiry .card:hover { border-color: #ca8a04; }
+    .col-novel .card:hover { border-color: #2563eb; }
 
-    /* ── Teacher notes (접이식) ── */
-    .teacher-notes {
-      margin: 4px 26px 22px;
-      border-top: 1px dashed #e2e8f0;
-      padding-top: 14px;
-    }
-    .teacher-notes summary {
-      cursor: pointer;
-      list-style: none;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 10px 14px;
-      border-radius: 10px;
-      background: #fef9e7;
-      border: 1px solid #f2e2a8;
-      font-size: 0.9rem;
+    .card-tag {
+      display: inline-block;
+      font-size: 0.72rem;
       font-weight: 700;
-      color: #78350f;
-      user-select: none;
-      transition: background 0.15s;
-    }
-    .teacher-notes summary::-webkit-details-marker { display: none; }
-    .teacher-notes summary:hover { background: #fdf3d0; }
-    .teacher-notes .tn-icon { font-size: 1rem; }
-    .teacher-notes[open] summary { background: #fdf3d0; }
-    .tn-body {
-      padding: 14px 6px 4px;
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
-    .tn-section h3 {
-      font-size: 0.88rem;
-      font-weight: 800;
-      color: #475569;
+      padding: 3px 9px;
+      border-radius: 999px;
       margin-bottom: 8px;
-      letter-spacing: -0.2px;
+      letter-spacing: 0.2px;
     }
-    .tn-list, .tn-codes {
-      list-style: none;
-      padding-left: 0;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      font-size: 0.88rem;
-      color: #334155;
-      line-height: 1.5;
+    .col-inquiry .card-tag { background: #fef3c7; color: #78350f; }
+    .col-novel .card-tag { background: #dbeafe; color: #1e40af; }
+
+    .card-title {
+      font-size: 1.05rem;
+      font-weight: 800;
+      letter-spacing: -0.3px;
+      margin-bottom: 6px;
+      line-height: 1.3;
     }
-    .tn-list li { padding-left: 18px; position: relative; }
-    .tn-list li::before {
-      content: '';
-      position: absolute;
-      left: 4px; top: 0.55em;
-      width: 6px; height: 6px;
-      background: #2563eb;
-      border-radius: 50%;
-    }
-    .tn-codes li { padding-left: 14px; position: relative; }
-    .tn-codes li::before {
-      content: '•';
-      position: absolute;
-      left: 2px; top: 0;
-      color: #94a3b8;
-    }
-    .tn-codes code {
-      background: #f1f5f9;
-      border: 1px solid #e2e8f0;
-      border-radius: 6px;
-      padding: 1px 7px;
-      font-family: 'SFMono-Regular', Menlo, Consolas, monospace;
+    .card-sub {
       font-size: 0.85rem;
-      color: #1e293b;
+      color: #64748b;
+      font-weight: 500;
+      line-height: 1.45;
+    }
+    .card-foot {
+      margin-top: 12px;
+      display: flex;
+      justify-content: flex-end;
+      font-size: 0.85rem;
+      color: #94a3b8;
       font-weight: 600;
     }
-    .tn-codes kbd {
-      background: #fff;
-      border: 1px solid #cbd5e1;
-      border-bottom-width: 2px;
-      border-radius: 5px;
-      padding: 1px 6px;
-      font-family: 'SFMono-Regular', Menlo, Consolas, monospace;
-      font-size: 0.8rem;
-      color: #334155;
-      font-weight: 700;
-      margin: 0 1px;
-    }
-    .tn-note {
-      font-size: 0.82rem;
-      color: #64748b;
-      margin-top: 8px;
-      line-height: 1.5;
-    }
-    .tn-note code {
-      background: #f1f5f9;
-      border: 1px solid #e2e8f0;
-      border-radius: 5px;
-      padding: 0 5px;
-      font-family: 'SFMono-Regular', Menlo, Consolas, monospace;
-      font-size: 0.78rem;
-      color: #1e293b;
-    }
+    .card:hover .card-foot { color: #2563eb; }
+    .col-inquiry .card:hover .card-foot { color: #ca8a04; }
 
-    /* ── Coming soon placeholder ── */
-    .coming-soon {
+    /* Empty placeholder card */
+    .card-empty {
       background: transparent;
       border: 2px dashed #cbd5e1;
-      border-radius: 20px;
-      padding: 32px 24px;
+      border-radius: 14px;
+      padding: 28px 18px;
       text-align: center;
       color: #94a3b8;
+      font-size: 0.88rem;
       font-weight: 500;
-      font-size: 0.92rem;
     }
-    .coming-soon .cs-icon {
-      font-size: 1.6rem;
+    .card-empty .ce-icon {
+      font-size: 1.4rem;
       display: block;
-      margin-bottom: 6px;
+      margin-bottom: 4px;
     }
 
     footer {
@@ -269,17 +170,19 @@
       text-align: center;
     }
 
-    /* ── Mobile ── */
-    @media (max-width: 520px) {
-      body { padding: 40px 16px 50px; }
-      .page-header { margin-bottom: 36px; }
+    /* ── Tablet (2 columns) ── */
+    @media (max-width: 980px) {
+      .board { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    /* ── Mobile (1 column) ── */
+    @media (max-width: 620px) {
+      body { padding: 36px 14px 50px; }
+      .page-header { margin-bottom: 32px; }
       .page-header h1 { font-size: 1.9rem; }
       .page-header .tagline { font-size: 0.92rem; }
-      .lab-group-header { padding: 18px 20px 14px; }
-      .lab-pages { padding: 14px 20px 18px; }
-      .lab-icon { width: 42px; height: 42px; font-size: 1.5rem; }
-      .lab-group-info h2 { font-size: 1.05rem; }
-      .page-link { padding: 13px 15px; }
+      .board { grid-template-columns: 1fr; gap: 14px; }
+      .column { padding: 14px; min-height: auto; }
     }
   </style>
 </head>
@@ -292,107 +195,59 @@
       <p class="tagline">AI와 함께 하는 수학 탐구 놀이터</p>
     </div>
 
-    <div class="lab-collection">
+    <div class="board">
 
-      <!-- 훼손된 체스판 도미노 시리즈 -->
-      <div class="lab-group">
-        <div class="lab-group-header">
-          <div class="lab-icon chess">♟️</div>
-          <div class="lab-group-info">
-            <h2>훼손된 체스판 도미노 시리즈</h2>
-            <p>두 칸이 제거된 체스판 — 도미노로 채울 수 있을까? 패턴 탐구부터 증명까지 4단계</p>
-          </div>
-        </div>
-        <div class="lab-pages">
-          <a class="page-link" href="1-domino-challenge/domino-challenge.html" target="_blank">
-            <div class="page-link-left">
-              <div class="page-badge">1</div>
-              <div>
-                <div class="page-link-text">1단계 — 8×8 체스판 도전</div>
-                <div class="page-link-sub">직접 도미노를 놓으며 언제 가능·불가능한지 탐구</div>
-              </div>
-            </div>
-            <span class="page-link-arrow">→</span>
-          </a>
-          <a class="page-link" href="1-domino-challenge/domino-challenge-2.html" target="_blank">
-            <div class="page-link-left">
-              <div class="page-badge">2</div>
-              <div>
-                <div class="page-link-text">2단계 — 패턴 찾기 (6×6 &amp; 4×4)</div>
-                <div class="page-link-sub">같은 색 / 다른 색 제거 비교 실험</div>
-              </div>
-            </div>
-            <span class="page-link-arrow">→</span>
-          </a>
-          <a class="page-link" href="1-domino-challenge/domino-challenge-3.html" target="_blank">
-            <div class="page-link-left">
-              <div class="page-badge">3</div>
-              <div>
-                <div class="page-link-text">3단계 — 경로 탐험</div>
-                <div class="page-link-sub">해밀턴 순환 경로를 스스로 발견</div>
-              </div>
-            </div>
-            <span class="page-link-arrow">→</span>
-          </a>
-          <a class="page-link" href="1-domino-challenge/domino-challenge-4.html" target="_blank">
-            <div class="page-link-left">
-              <div class="page-badge">4</div>
-              <div>
-                <div class="page-link-text">4단계 — 증명 풀이</div>
-                <div class="page-link-sub">순환 경로를 이용한 완성된 증명</div>
-              </div>
-            </div>
-            <span class="page-link-arrow">→</span>
-          </a>
+      <!-- 컬럼 1: 탐구·증명 활동 -->
+      <div class="column col-inquiry">
+        <div class="column-header">
+          <span class="col-emoji">🧩</span>
+          <h2>탐구 · 증명 활동</h2>
         </div>
 
-        <!-- 교사용 안내 (학생에게도 보이지만 접힘 상태) -->
-        <details class="teacher-notes" open>
-          <summary>
-            <span class="tn-icon">🔑</span>
-            <span class="tn-label">선생님용 안내 (암호 · 마스터키)</span>
-          </summary>
-          <div class="tn-body">
-            <div class="tn-section">
-              <h3>학습 흐름 (4단계)</h3>
-              <ol class="tn-list">
-                <li><b>1단계 · 8×8 체스판 도전</b> — 직접 도미노를 놓으며 "언제 가능/불가능한가" 탐구</li>
-                <li><b>2단계 · 패턴 찾기 (6×6 & 4×4)</b> — 같은 색 / 다른 색 제거 비교 실험</li>
-                <li><b>3단계 · 증명 힌트</b> — 해밀턴 순환 경로를 스스로 발견</li>
-                <li><b>4단계 · 증명 풀이</b> — 순환 경로를 이용한 완성된 증명</li>
-              </ol>
-            </div>
-            <div class="tn-section">
-              <h3>다음 페이지 이동 암호</h3>
-              <ul class="tn-codes">
-                <li>1단계 → 2단계: <code>chess</code></li>
-                <li>2단계 → 3단계: <code>domino</code></li>
-                <li>3단계 → 4단계: <code>challenge</code></li>
-              </ul>
-              <p class="tn-note">각 페이지 맨 아래 암호 입력창에 입력하면 다음 페이지로 이동합니다. 수업 진행 타이밍에 맞춰 암호를 공개하세요.</p>
-            </div>
-            <div class="tn-section">
-              <h3>마스터키 (선생님 전용 단축키)</h3>
-              <ul class="tn-codes">
-                <li><b>2단계</b> · <kbd>Shift</kbd>+<kbd>T</kbd> — 타이머 5초로 점프</li>
-                <li><b>2단계</b> · <kbd>Shift</kbd>+<kbd>F</kbd> — 타이머 즉시 만료</li>
-                <li><b>2단계</b> · <kbd>Shift</kbd>+<kbd>U</kbd> — 모든 스테이지 잠금 해제</li>
-                <li><b>3단계</b> · <kbd>Shift</kbd>+<kbd>F</kbd> — 1~6단계 전부 완료 상태로 점프</li>
-              </ul>
-              <p class="tn-note">한글 입력 상태에서도 작동합니다. 입력창에 포커스가 있으면 무시됩니다.</p>
-            </div>
-            <div class="tn-section">
-              <h3>다른 선생님과 공유할 때</h3>
-              <p class="tn-note">학생에게는 이 허브 URL 하나만 공유하면 됩니다. 암호 3개(<code>chess</code> / <code>domino</code> / <code>challenge</code>)를 수업 진행 중 단계에 맞춰 공개하세요.</p>
-            </div>
-          </div>
-        </details>
+        <a class="card" href="1-domino-challenge/chess-board-hub.html">
+          <span class="card-tag">중·고 · 4단계 시리즈</span>
+          <div class="card-title">♟️ 훼손된 체스판 도미노</div>
+          <div class="card-sub">두 칸이 빠진 체스판을 도미노로 덮을 수 있을까? 패턴 탐구부터 증명까지.</div>
+          <div class="card-foot">시리즈 보기 →</div>
+        </a>
+
+        <div class="card-empty">
+          <span class="ce-icon">✨</span>
+          새 탐구가 곧 추가됩니다
+        </div>
       </div>
 
-      <!-- 앞으로 추가될 탐구 자리 -->
-      <div class="coming-soon">
-        <span class="cs-icon">✨</span>
-        새로운 탐구가 곧 이 자리에 추가됩니다
+      <!-- 컬럼 2: 비주얼노벨 게임 -->
+      <div class="column col-novel">
+        <div class="column-header">
+          <span class="col-emoji">📖</span>
+          <h2>비주얼노벨 게임</h2>
+        </div>
+
+        <a class="card" href="https://getbetterwithu.github.io/gamifications/unit4_tri_quad/games/stage1_quadrilaterals/index.html" target="_blank">
+          <span class="card-tag">중2 · 4단원 사각형</span>
+          <div class="card-title">📐 폴리곤의 학당 — 사각형의 시험</div>
+          <div class="card-sub">피타고라스 학당 신입 폴리곤이 되어 평행사변형·마름모·직사각형·정사각형을 판별하며 분쟁을 해결한다.</div>
+          <div class="card-foot">게임 시작 →</div>
+        </a>
+
+        <div class="card-empty">
+          <span class="ce-icon">✨</span>
+          5단원 닮음 게임이 곧 추가됩니다
+        </div>
+      </div>
+
+      <!-- 컬럼 3: 새로운 형식 (placeholder) -->
+      <div class="column col-future">
+        <div class="column-header">
+          <span class="col-emoji">🔮</span>
+          <h2>다음 형식</h2>
+        </div>
+
+        <div class="card-empty">
+          <span class="ce-icon">＋</span>
+          새로운 형식의 활동이 추가될 자리
+        </div>
       </div>
 
     </div>

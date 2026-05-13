@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>훼손된 체스판 도미노 시리즈 · AI-Labs</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Noto Sans KR', sans-serif;
+      background: #f8fafc;
+      color: #1e293b;
+      min-height: 100vh;
+      padding: 56px 20px 60px;
+    }
+
+    .container {
+      max-width: 760px;
+      margin: 0 auto;
+    }
+
+    /* ── Back link ── */
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.9rem;
+      color: #64748b;
+      text-decoration: none;
+      margin-bottom: 18px;
+      font-weight: 500;
+      transition: color 0.15s;
+    }
+    .back-link:hover { color: #2563eb; }
+
+    /* ── Page header ── */
+    .page-header {
+      text-align: center;
+      margin-bottom: 36px;
+    }
+    .page-header h1 {
+      font-size: 2.0rem;
+      font-weight: 900;
+      letter-spacing: -1px;
+      margin-bottom: 10px;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .page-header h1 .emoji { font-size: 1.7rem; line-height: 1; }
+    .page-header h1 .brand {
+      background: linear-gradient(135deg, #1e293b 0%, #ca8a04 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .page-header .tagline {
+      font-size: 0.98rem;
+      color: #64748b;
+      font-weight: 500;
+    }
+
+    /* ── Lab group ── */
+    .lab-group {
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 4px 24px rgba(15, 23, 42, 0.06);
+      border: 1px solid #e2e8f0;
+      overflow: hidden;
+    }
+
+    .lab-pages {
+      padding: 22px 26px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .page-link {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 15px 18px;
+      border-radius: 12px;
+      border: 1.5px solid #e2e8f0;
+      text-decoration: none;
+      color: #1e293b;
+      transition: all 0.15s;
+      background: #f8fafc;
+    }
+    .page-link:hover {
+      border-color: #ca8a04;
+      background: #fefce8;
+      transform: translateX(3px);
+    }
+    .page-link-left { display: flex; align-items: center; gap: 12px; }
+    .page-badge {
+      width: 30px; height: 30px;
+      border-radius: 9px;
+      background: linear-gradient(135deg, #ca8a04, #a16207);
+      color: white;
+      font-size: 0.82rem;
+      font-weight: 800;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .page-link-text { font-size: 0.96rem; font-weight: 700; }
+    .page-link-sub { font-size: 0.8rem; color: #64748b; font-weight: 500; margin-top: 2px; }
+    .page-link-arrow { color: #94a3b8; font-size: 1.05rem; transition: transform 0.15s; }
+    .page-link:hover .page-link-arrow { transform: translateX(4px); color: #ca8a04; }
+
+    /* ── Teacher notes (접이식) ── */
+    .teacher-notes {
+      margin: 4px 26px 22px;
+      border-top: 1px dashed #e2e8f0;
+      padding-top: 14px;
+    }
+    .teacher-notes summary {
+      cursor: pointer;
+      list-style: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      border-radius: 10px;
+      background: #fef9e7;
+      border: 1px solid #f2e2a8;
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: #78350f;
+      user-select: none;
+      transition: background 0.15s;
+    }
+    .teacher-notes summary::-webkit-details-marker { display: none; }
+    .teacher-notes summary:hover { background: #fdf3d0; }
+    .teacher-notes .tn-icon { font-size: 1rem; }
+    .teacher-notes[open] summary { background: #fdf3d0; }
+    .tn-body {
+      padding: 14px 6px 4px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .tn-section h3 {
+      font-size: 0.88rem;
+      font-weight: 800;
+      color: #475569;
+      margin-bottom: 8px;
+      letter-spacing: -0.2px;
+    }
+    .tn-list, .tn-codes {
+      list-style: none;
+      padding-left: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 0.88rem;
+      color: #334155;
+      line-height: 1.5;
+    }
+    .tn-list li { padding-left: 18px; position: relative; }
+    .tn-list li::before {
+      content: '';
+      position: absolute;
+      left: 4px; top: 0.55em;
+      width: 6px; height: 6px;
+      background: #ca8a04;
+      border-radius: 50%;
+    }
+    .tn-codes li { padding-left: 14px; position: relative; }
+    .tn-codes li::before {
+      content: '•';
+      position: absolute;
+      left: 2px; top: 0;
+      color: #94a3b8;
+    }
+    .tn-codes code {
+      background: #f1f5f9;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 1px 7px;
+      font-family: 'SFMono-Regular', Menlo, Consolas, monospace;
+      font-size: 0.85rem;
+      color: #1e293b;
+      font-weight: 600;
+    }
+    .tn-codes kbd {
+      background: #fff;
+      border: 1px solid #cbd5e1;
+      border-bottom-width: 2px;
+      border-radius: 5px;
+      padding: 1px 6px;
+      font-family: 'SFMono-Regular', Menlo, Consolas, monospace;
+      font-size: 0.8rem;
+      color: #334155;
+      font-weight: 700;
+      margin: 0 1px;
+    }
+    .tn-note {
+      font-size: 0.82rem;
+      color: #64748b;
+      margin-top: 8px;
+      line-height: 1.5;
+    }
+    .tn-note code {
+      background: #f1f5f9;
+      border: 1px solid #e2e8f0;
+      border-radius: 5px;
+      padding: 0 5px;
+      font-family: 'SFMono-Regular', Menlo, Consolas, monospace;
+      font-size: 0.78rem;
+      color: #1e293b;
+    }
+
+    footer {
+      margin-top: 56px;
+      font-size: 0.85rem;
+      color: #94a3b8;
+      text-align: center;
+    }
+
+    @media (max-width: 520px) {
+      body { padding: 40px 16px 50px; }
+      .page-header { margin-bottom: 28px; }
+      .page-header h1 { font-size: 1.7rem; }
+      .lab-pages { padding: 18px 20px; }
+      .page-link { padding: 13px 15px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+
+    <a class="back-link" href="../game-hub.html">← AI-Labs 카탈로그로</a>
+
+    <div class="page-header">
+      <h1><span class="emoji">♟️</span><span class="brand">훼손된 체스판 도미노</span></h1>
+      <p class="tagline">두 칸이 제거된 체스판 — 도미노로 채울 수 있을까? 패턴 탐구부터 증명까지 4단계</p>
+    </div>
+
+    <div class="lab-group">
+      <div class="lab-pages">
+        <a class="page-link" href="domino-challenge.html" target="_blank">
+          <div class="page-link-left">
+            <div class="page-badge">1</div>
+            <div>
+              <div class="page-link-text">1단계 — 8×8 체스판 도전</div>
+              <div class="page-link-sub">직접 도미노를 놓으며 언제 가능·불가능한지 탐구</div>
+            </div>
+          </div>
+          <span class="page-link-arrow">→</span>
+        </a>
+        <a class="page-link" href="domino-challenge-2.html" target="_blank">
+          <div class="page-link-left">
+            <div class="page-badge">2</div>
+            <div>
+              <div class="page-link-text">2단계 — 패턴 찾기 (6×6 &amp; 4×4)</div>
+              <div class="page-link-sub">같은 색 / 다른 색 제거 비교 실험</div>
+            </div>
+          </div>
+          <span class="page-link-arrow">→</span>
+        </a>
+        <a class="page-link" href="domino-challenge-3.html" target="_blank">
+          <div class="page-link-left">
+            <div class="page-badge">3</div>
+            <div>
+              <div class="page-link-text">3단계 — 경로 탐험</div>
+              <div class="page-link-sub">해밀턴 순환 경로를 스스로 발견</div>
+            </div>
+          </div>
+          <span class="page-link-arrow">→</span>
+        </a>
+        <a class="page-link" href="domino-challenge-4.html" target="_blank">
+          <div class="page-link-left">
+            <div class="page-badge">4</div>
+            <div>
+              <div class="page-link-text">4단계 — 증명 풀이</div>
+              <div class="page-link-sub">순환 경로를 이용한 완성된 증명</div>
+            </div>
+          </div>
+          <span class="page-link-arrow">→</span>
+        </a>
+      </div>
+
+      <details class="teacher-notes" open>
+        <summary>
+          <span class="tn-icon">🔑</span>
+          <span class="tn-label">선생님용 안내 (암호 · 마스터키)</span>
+        </summary>
+        <div class="tn-body">
+          <div class="tn-section">
+            <h3>학습 흐름 (4단계)</h3>
+            <ol class="tn-list">
+              <li><b>1단계 · 8×8 체스판 도전</b> — 직접 도미노를 놓으며 "언제 가능/불가능한가" 탐구</li>
+              <li><b>2단계 · 패턴 찾기 (6×6 &amp; 4×4)</b> — 같은 색 / 다른 색 제거 비교 실험</li>
+              <li><b>3단계 · 증명 힌트</b> — 해밀턴 순환 경로를 스스로 발견</li>
+              <li><b>4단계 · 증명 풀이</b> — 순환 경로를 이용한 완성된 증명</li>
+            </ol>
+          </div>
+          <div class="tn-section">
+            <h3>다음 페이지 이동 암호</h3>
+            <ul class="tn-codes">
+              <li>1단계 → 2단계: <code>chess</code></li>
+              <li>2단계 → 3단계: <code>domino</code></li>
+              <li>3단계 → 4단계: <code>challenge</code></li>
+            </ul>
+            <p class="tn-note">각 페이지 맨 아래 암호 입력창에 입력하면 다음 페이지로 이동합니다. 수업 진행 타이밍에 맞춰 암호를 공개하세요.</p>
+          </div>
+          <div class="tn-section">
+            <h3>마스터키 (선생님 전용 단축키)</h3>
+            <ul class="tn-codes">
+              <li><b>2단계</b> · <kbd>Shift</kbd>+<kbd>T</kbd> — 타이머 5초로 점프</li>
+              <li><b>2단계</b> · <kbd>Shift</kbd>+<kbd>F</kbd> — 타이머 즉시 만료</li>
+              <li><b>2단계</b> · <kbd>Shift</kbd>+<kbd>U</kbd> — 모든 스테이지 잠금 해제</li>
+              <li><b>3단계</b> · <kbd>Shift</kbd>+<kbd>F</kbd> — 1~6단계 전부 완료 상태로 점프</li>
+            </ul>
+            <p class="tn-note">한글 입력 상태에서도 작동합니다. 입력창에 포커스가 있으면 무시됩니다.</p>
+          </div>
+          <div class="tn-section">
+            <h3>다른 선생님과 공유할 때</h3>
+            <p class="tn-note">학생에게는 이 허브 URL 하나만 공유하면 됩니다. 암호 3개(<code>chess</code> / <code>domino</code> / <code>challenge</code>)를 수업 진행 중 단계에 맞춰 공개하세요.</p>
+          </div>
+        </div>
+      </details>
+    </div>
+
+    <footer>&copy; 2026 서울사대부중 2학년 수학B 허철호 선생님 · All rights reserved</footer>
+
+  </div>
+
+</body>
+</html>
